@@ -1,16 +1,13 @@
 export const TOOLS = [
   {
     name: "get_inventory",
-    description:
-      "Query the current inventory. Returns items filtered by stock status and/or category.",
+    description: "Query inventory filtered by stock status and/or category.",
     input_schema: {
       type: "object",
       properties: {
         filter: {
           type: "string",
           enum: ["all", "low_stock", "near_expiry", "out_of_stock"],
-          description:
-            "'low_stock' = at or below reorder point. 'near_expiry' = expiring within 7 days.",
         },
         category: {
           type: "string",
@@ -22,7 +19,6 @@ export const TOOLS = [
             "beverages",
             "packaging",
           ],
-          description: "Optional: filter by product category.",
         },
       },
       required: ["filter"],
@@ -30,7 +26,7 @@ export const TOOLS = [
   },
   {
     name: "get_orders",
-    description: "Query delivery orders filtered by status.",
+    description: "Query delivery orders by status.",
     input_schema: {
       type: "object",
       properties: {
@@ -46,30 +42,24 @@ export const TOOLS = [
             "cancelled",
           ],
         },
-        date: {
-          type: "string",
-          description: "Optional YYYY-MM-DD to filter by delivery date.",
-        },
+        date: { type: "string", description: "YYYY-MM-DD" },
       },
       required: ["status"],
     },
   },
   {
     name: "get_fleet_status",
-    description: "Returns current status of all vehicles and drivers.",
+    description: "Current status of all vehicles and drivers.",
     input_schema: {
       type: "object",
       properties: {
-        include_offline: {
-          type: "boolean",
-          description: "Include maintenance/offline vehicles. Default false.",
-        },
+        include_offline: { type: "boolean" },
       },
     },
   },
   {
     name: "get_analytics",
-    description: "Compute KPI metrics and analytics from current data.",
+    description: "Compute KPI metrics.",
     input_schema: {
       type: "object",
       properties: {
@@ -90,16 +80,12 @@ export const TOOLS = [
   },
   {
     name: "update_stock_level",
-    description:
-      "Adjust stock level for an inventory item (shipment received, waste, correction).",
+    description: "Adjust stock for an inventory item.",
     input_schema: {
       type: "object",
       properties: {
         inventory_id: { type: "string" },
-        adjustment: {
-          type: "number",
-          description: "Positive to add, negative to subtract.",
-        },
+        adjustment: { type: "number" },
         reason: {
           type: "string",
           enum: [
@@ -118,15 +104,12 @@ export const TOOLS = [
   },
   {
     name: "create_reorder",
-    description: "Create a purchase reorder request for an inventory item.",
+    description: "Create a reorder request for an item.",
     input_schema: {
       type: "object",
       properties: {
         inventory_id: { type: "string" },
-        quantity: {
-          type: "number",
-          description: "Defaults to item reorderQty if omitted.",
-        },
+        quantity: { type: "number" },
         urgency: { type: "string", enum: ["standard", "express"] },
         notes: { type: "string" },
       },
@@ -150,14 +133,8 @@ export const TOOLS = [
             "cancelled",
           ],
         },
-        driver_id: {
-          type: "string",
-          description: "Optional: assign/reassign driver.",
-        },
-        vehicle_id: {
-          type: "string",
-          description: "Optional: assign/reassign vehicle.",
-        },
+        driver_id: { type: "string" },
+        vehicle_id: { type: "string" },
         notes: { type: "string" },
       },
       required: ["order_id", "new_status"],
@@ -166,7 +143,7 @@ export const TOOLS = [
   {
     name: "assign_delivery",
     description:
-      "Assign a pending delivery order to a driver and vehicle. Validates availability and capacity.",
+      "Assign pending order to driver+vehicle. Validates availability & capacity.",
     input_schema: {
       type: "object",
       properties: {
@@ -179,20 +156,17 @@ export const TOOLS = [
   },
   {
     name: "list_emails",
-    description:
-      "List emails in the PrimeChill operations mailbox, filtered by direction and/or status.",
+    description: "List ops mailbox emails.",
     input_schema: {
       type: "object",
       properties: {
         direction: {
           type: "string",
           enum: ["incoming", "outgoing", "all"],
-          description: "Inbox vs outbox vs both. Defaults to 'all'.",
         },
         status: {
           type: "string",
           enum: ["unread", "read", "handled", "draft", "sent", "all"],
-          description: "Filter by status. Defaults to 'all'.",
         },
         category: {
           type: "string",
@@ -206,42 +180,28 @@ export const TOOLS = [
             "other",
           ],
         },
-        limit: {
-          type: "number",
-          description: "Max number of rows to return. Defaults to 20.",
-        },
+        limit: { type: "number" },
       },
     },
   },
   {
     name: "read_email",
-    description:
-      "Read the full body of an email and any related order/supplier context. Marks unread emails as read.",
+    description: "Read full body + related context. Marks unread→read.",
     input_schema: {
       type: "object",
-      properties: {
-        email_id: { type: "string" },
-      },
+      properties: { email_id: { type: "string" } },
       required: ["email_id"],
     },
   },
   {
     name: "draft_email_reply",
-    description:
-      "Draft a reply to an incoming email. Saves it to the outbox as a DRAFT for the human to review — does not actually send.",
+    description: "Draft a reply to an incoming email (saved as draft).",
     input_schema: {
       type: "object",
       properties: {
-        reply_to_email_id: {
-          type: "string",
-          description: "The incoming email being replied to.",
-        },
+        reply_to_email_id: { type: "string" },
         subject: { type: "string" },
-        body: {
-          type: "string",
-          description:
-            "Plain-text reply body. Keep it concise, professional, factual.",
-        },
+        body: { type: "string" },
         related_order_id: { type: "string" },
       },
       required: ["reply_to_email_id", "subject", "body"],
@@ -250,15 +210,11 @@ export const TOOLS = [
   {
     name: "send_email",
     description:
-      "Send an outgoing email (marked as 'sent'). If email_id is a draft, promotes the draft to sent. Otherwise creates a new sent email.",
+      "Send outgoing email. If email_id is a draft, promotes to sent; else creates new sent email.",
     input_schema: {
       type: "object",
       properties: {
-        email_id: {
-          type: "string",
-          description:
-            "Optional — if provided and points to a draft, promotes that draft to sent.",
-        },
+        email_id: { type: "string" },
         to: { type: "string" },
         subject: { type: "string" },
         body: { type: "string" },
@@ -269,8 +225,7 @@ export const TOOLS = [
   },
   {
     name: "mark_email_handled",
-    description:
-      "Mark an email as handled without drafting a reply — for informational emails that need no response.",
+    description: "Mark an email handled without replying.",
     input_schema: {
       type: "object",
       properties: {
@@ -283,19 +238,12 @@ export const TOOLS = [
   {
     name: "generate_daily_report",
     description:
-      "Persist a daily operations report (the Genspark Daily Briefing) with exec summary, full HTML body, and numeric metrics.",
+      "Persist the Genspark Daily Briefing with summary, HTML body, and metrics.",
     input_schema: {
       type: "object",
       properties: {
-        summary: {
-          type: "string",
-          description: "Short exec summary paragraph, 2–3 sentences.",
-        },
-        html: {
-          type: "string",
-          description:
-            "HTML body of the report (no <html>/<head> wrapper). Use semantic tags and inline styles sparingly.",
-        },
+        summary: { type: "string" },
+        html: { type: "string" },
         metrics: {
           type: "object",
           properties: {

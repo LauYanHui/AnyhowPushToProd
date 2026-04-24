@@ -201,12 +201,14 @@ function AlertsCard() {
         "Assign all pending orders using the best available driver and vehicle. Prioritise urgent orders and check capacity carefully.",
         api,
         "dispatch",
+        { mode: "ephemeral" },
       );
     } else if (run === "triage-inbox") {
       await runAgentLoop(
         "List all unread incoming emails and triage each one — draft replies where appropriate, mark informational mail as handled.",
         api,
         "inbox",
+        { mode: "ephemeral" },
       );
     }
   }
