@@ -306,7 +306,7 @@ export async function runAgentLoop(
   api: AgentApi,
   profileId: AgentProfileId = "general",
   opts: AgentRunOptions = {},
-): Promise<void> {
+): Promise<boolean> {
   const mode: AgentRunMode = opts.mode ?? "persistent";
 
   api.dispatch({ type: "SET_RUNNING", running: true });
@@ -505,4 +505,5 @@ export async function runAgentLoop(
       profileId,
     });
   }
+  return !erroredOut;
 }

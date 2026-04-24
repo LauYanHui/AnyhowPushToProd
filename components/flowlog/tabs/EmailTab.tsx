@@ -562,12 +562,12 @@ export function EmailTab() {
 
   async function handleApprove(id: string) {
     if (state.agentRunning) return;
-    await runAgentLoop(
+    const ok = await runAgentLoop(
       `Send the draft email ${id} now. Use send_email with email_id="${id}".`,
       api,
       "outbox",
     );
-    setView("sent");
+    if (ok) setView("sent");
   }
 
   function handleDiscard(id: string) {
