@@ -31,12 +31,18 @@ export function StatusPill({ status }: { status: string }) {
   );
 }
 
+const PRIORITY_PILL: Record<Priority, string> = {
+  urgent: "pill-red",
+  high: "pill-amber",
+  normal: "pill-muted",
+  low: "pill-muted",
+};
+
 export function PriorityDot({ priority }: { priority: Priority }) {
   return (
-    <span
-      className={`${styles["priority-dot"]} ${styles[`p-${priority}`]}`}
-      title={priority}
-    />
+    <span className={`${styles.pill} ${styles[PRIORITY_PILL[priority]]}`}>
+      {priority}
+    </span>
   );
 }
 
@@ -81,10 +87,12 @@ export function StockBar({ item }: { item: Inventory }) {
 
 export function FilterPill({
   label,
+  count,
   active,
   onClick,
 }: {
   label: string;
+  count?: number;
   active: boolean;
   onClick: () => void;
 }) {
@@ -95,6 +103,9 @@ export function FilterPill({
       onClick={onClick}
     >
       {label}
+      {count !== undefined && count > 0 && (
+        <span className={styles["filter-pill-count"]}>{count}</span>
+      )}
     </button>
   );
 }
