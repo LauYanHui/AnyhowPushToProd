@@ -8,8 +8,6 @@ import { DashboardTab } from "./tabs/DashboardTab";
 import { EmailTab } from "./tabs/EmailTab";
 import { InventoryTab } from "./tabs/InventoryTab";
 import { OrdersTab } from "./tabs/OrdersTab";
-import { ReportsTab } from "./tabs/ReportsTab";
-
 function ActiveTab() {
   const { state } = useFlowLog();
   switch (state.activeTab) {
@@ -21,8 +19,6 @@ function ActiveTab() {
       return <OrdersTab />;
     case "emails":
       return <EmailTab />;
-    case "reports":
-      return <ReportsTab />;
   }
 }
 

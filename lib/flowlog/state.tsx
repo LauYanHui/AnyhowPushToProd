@@ -44,6 +44,7 @@ export interface FlowLogState {
   planLoading: boolean;
   planError: string | null;
   chatOpen: boolean;
+  apiKey: string;
 }
 
 export type Action =
@@ -72,7 +73,8 @@ export type Action =
   | { type: "UPDATE_ORDER"; id: string; patch: Partial<Order> }
   | { type: "UPDATE_DRIVER"; id: string; patch: Partial<Driver> }
   | { type: "UPDATE_VEHICLE"; id: string; patch: Partial<Vehicle> }
-  | { type: "APPEND_REORDER"; reorder: Reorder };
+  | { type: "APPEND_REORDER"; reorder: Reorder }
+  | { type: "SET_API_KEY"; key: string };
 
 function reducer(state: FlowLogState, action: Action): FlowLogState {
   switch (action.type) {
@@ -195,6 +197,12 @@ function reducer(state: FlowLogState, action: Action): FlowLogState {
           reorders: [...state.data.reorders, action.reorder],
         },
       };
+    case "SET_API_KEY":
+      if (typeof window !== "undefined") {
+        if (action.key) localStorage.setItem("flowlog:apiKey", action.key);
+        else localStorage.removeItem("flowlog:apiKey");
+      }
+      return { ...state, apiKey: action.key };
   }
 }
 
@@ -212,6 +220,10 @@ function initialState(): FlowLogState {
     agentPrefill: null,
     selectedEmailId: null,
     selectedReportId: null,
+    apiKey:
+      (typeof window !== "undefined"
+        ? localStorage.getItem("flowlog:apiKey")
+        : null) ?? "",
     plan: null,
     planLoading: false,
     planError: null,

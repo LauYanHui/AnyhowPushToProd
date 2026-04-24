@@ -87,13 +87,15 @@ Return only the JSON — no markdown fences, no extra text.`;
 }
 
 export async function POST(req: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const apiKey =
+    req.headers.get("x-flowlog-api-key") || process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
     return Response.json(
       {
         error: {
           type: "configuration_error",
           message:
-            "Server is missing ANTHROPIC_API_KEY. Add it to .env.local and restart the dev server.",
+            "No API key configured. Enter your Anthropic API key in the sidebar.",
         },
       },
       { status: 500 },
@@ -127,7 +129,7 @@ export async function POST(req: Request) {
   const expiring = checkExpiry(inventory);
   const deliveryRisks = checkDeliveryRisk(orders, drivers);
 
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey });
   let raw: string;
   let stopReason: string | null = null;
   try {

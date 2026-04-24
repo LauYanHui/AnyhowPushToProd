@@ -8,7 +8,6 @@ import {
   EmailIcon,
   InventoryIcon,
   OrdersIcon,
-  ReportsIcon,
   TruckIcon,
 } from "./Icons";
 
@@ -17,7 +16,6 @@ const NAV: Array<{ id: TabId; label: string; Icon: () => React.JSX.Element }> = 
   { id: "inventory", label: "Inventory", Icon: InventoryIcon },
   { id: "orders", label: "Deliveries", Icon: OrdersIcon },
   { id: "emails", label: "Emails", Icon: EmailIcon },
-  { id: "reports", label: "Reports", Icon: ReportsIcon },
 ];
 
 export function Sidebar() {
@@ -86,10 +84,40 @@ export function Sidebar() {
             <span className={styles["plan-indicator-arrow"]}>→</span>
           </button>
         )}
-        <div className={styles["api-hint"]}>
-          Agents run server-side via /api/agent. Set{" "}
-          <span className={styles.mono}>ANTHROPIC_API_KEY</span> in{" "}
-          <span className={styles.mono}>.env.local</span>.
+        <div className={styles["api-key-block"]}>
+          <div className={styles["api-key-label"]}>Anthropic API Key</div>
+          <div className={styles["api-key-row"]}>
+            <input
+              type="password"
+              className={styles["api-key-input"]}
+              value={state.apiKey}
+              onChange={(e) =>
+                dispatch({ type: "SET_API_KEY", key: e.target.value })
+              }
+              placeholder="sk-ant-..."
+              spellCheck={false}
+              autoComplete="off"
+              aria-label="Anthropic API key"
+            />
+            {state.apiKey && (
+              <button
+                type="button"
+                className={styles["api-key-clear"]}
+                onClick={() => dispatch({ type: "SET_API_KEY", key: "" })}
+                aria-label="Clear API key"
+                title="Clear"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <div className={styles["api-key-status"]}>
+            {state.apiKey ? (
+              <span style={{ color: "var(--green)" }}>Key set</span>
+            ) : (
+              <span style={{ color: "var(--hint)" }}>Required to run agents</span>
+            )}
+          </div>
         </div>
       </div>
     </nav>

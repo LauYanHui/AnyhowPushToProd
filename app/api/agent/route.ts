@@ -44,14 +44,15 @@ function withPromptCaching(
 }
 
 export async function POST(req: Request) {
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key =
+    req.headers.get("x-flowlog-api-key") || process.env.ANTHROPIC_API_KEY;
   if (!key) {
     return Response.json(
       {
         error: {
           type: "configuration_error",
           message:
-            "Server is missing ANTHROPIC_API_KEY. Add it to .env.local and restart the dev server.",
+            "No API key configured. Enter your Anthropic API key in the sidebar.",
         },
       },
       { status: 500 },

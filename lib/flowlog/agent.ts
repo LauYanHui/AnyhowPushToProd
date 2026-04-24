@@ -356,9 +356,13 @@ export async function runAgentLoop(
       let rateLimitAttempts = 0;
 
       while (true) {
+        const apiKey = api.getState().apiKey;
         response = await fetch("/api/agent", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: {
+            "content-type": "application/json",
+            ...(apiKey ? { "x-flowlog-api-key": apiKey } : {}),
+          },
           body: JSON.stringify({
             max_tokens: 2048,
             system,

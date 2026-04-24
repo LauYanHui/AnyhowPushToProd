@@ -15,7 +15,6 @@ const PROFILE_ORDER: AgentProfileId[] = [
   "inbox",
   "outbox",
   "dispatch",
-  "reports",
 ];
 
 const WINDOW_W = 420;
@@ -91,7 +90,7 @@ function ChatWindow() {
       {profileMessages.length === 0 && (
         <div className={styles["fchat-empty"]}>
           Pick a profile above and ask anything — or trigger an agent from the
-          dashboard, emails, or reports.
+          dashboard or emails.
         </div>
       )}
       {profileMessages.map((m) => (

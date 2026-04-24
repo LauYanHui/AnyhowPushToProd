@@ -397,7 +397,10 @@ export function DashboardTab() {
       const body = toPlanInput(state.data);
       const res = await fetch("/api/plan", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(state.apiKey ? { "x-flowlog-api-key": state.apiKey } : {}),
+        },
         body: JSON.stringify(body),
       });
       const data = await res.json();

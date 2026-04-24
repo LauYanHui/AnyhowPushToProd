@@ -160,32 +160,11 @@ export interface Email {
   replyToEmailId: string | null;
 }
 
-export interface DailyReportMetrics {
-  ordersDelivered: number;
-  ordersPending: number;
-  ordersFailed: number;
-  inventoryValue: number;
-  lowStockCount: number;
-  expiryRiskValue: number;
-  fleetUtilizationPct: number;
-}
-
-export interface DailyReport {
-  id: string;
-  generatedAt: string;
-  dateCovered: string;
-  title: string;
-  summary: string;
-  html: string;
-  metrics: DailyReportMetrics;
-}
-
 export type AgentProfileId =
   | "general"
   | "inbox"
   | "outbox"
-  | "dispatch"
-  | "reports";
+  | "dispatch";
 
 export interface FlowLogData {
   inventory: Inventory[];
@@ -195,15 +174,13 @@ export interface FlowLogData {
   suppliers: Supplier[];
   reorders: Reorder[];
   emails: Email[];
-  reports: DailyReport[];
 }
 
 export type TabId =
   | "dashboard"
   | "inventory"
   | "orders"
-  | "emails"
-  | "reports";
+  | "emails";
 
 export type InvFilter = "all" | "low_stock" | "near_expiry" | "out_of_stock";
 
