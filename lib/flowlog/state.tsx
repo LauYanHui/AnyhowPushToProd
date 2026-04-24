@@ -16,11 +16,15 @@ import type {
   AnthropicMessage,
   ChatDisplayMessage,
   DailyReport,
+  Driver,
   Email,
   FlowLogData,
   InvFilter,
+  Order,
   OrdFilter,
+  Reorder,
   TabId,
+  Vehicle,
 } from "./types";
 
 export interface FlowLogState {
@@ -62,7 +66,11 @@ export type Action =
   | { type: "SET_PLAN"; plan: PlanResult | null }
   | { type: "SET_PLAN_LOADING"; loading: boolean }
   | { type: "SET_PLAN_ERROR"; error: string | null }
-  | { type: "SET_CHAT_OPEN"; open: boolean };
+  | { type: "SET_CHAT_OPEN"; open: boolean }
+  | { type: "UPDATE_ORDER"; id: string; patch: Partial<Order> }
+  | { type: "UPDATE_DRIVER"; id: string; patch: Partial<Driver> }
+  | { type: "UPDATE_VEHICLE"; id: string; patch: Partial<Vehicle> }
+  | { type: "APPEND_REORDER"; reorder: Reorder };
 
 function reducer(state: FlowLogState, action: Action): FlowLogState {
   switch (action.type) {
@@ -139,6 +147,44 @@ function reducer(state: FlowLogState, action: Action): FlowLogState {
       return { ...state, planError: action.error };
     case "SET_CHAT_OPEN":
       return { ...state, chatOpen: action.open };
+    case "UPDATE_ORDER":
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          orders: state.data.orders.map((o) =>
+            o.id === action.id ? { ...o, ...action.patch } : o,
+          ),
+        },
+      };
+    case "UPDATE_DRIVER":
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          drivers: state.data.drivers.map((d) =>
+            d.id === action.id ? { ...d, ...action.patch } : d,
+          ),
+        },
+      };
+    case "UPDATE_VEHICLE":
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          vehicles: state.data.vehicles.map((v) =>
+            v.id === action.id ? { ...v, ...action.patch } : v,
+          ),
+        },
+      };
+    case "APPEND_REORDER":
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          reorders: [...state.data.reorders, action.reorder],
+        },
+      };
   }
 }
 

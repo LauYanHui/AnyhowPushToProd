@@ -1969,3 +1969,141 @@
     top: 60px !important;
   }
 }
+
+/* ── INVENTORY EXPANDED ROW ── */
+.inv-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.inv-detail-section-title {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--hint);
+  padding-bottom: 5px;
+  border-bottom: 0.5px solid var(--border);
+  margin-bottom: 2px;
+}
+.inv-detail-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+.inv-detail-kv-label {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.inv-detail-kv-value {
+  color: var(--text);
+  text-align: right;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 12px;
+}
+.inv-expanded-row td {
+  padding: 0 !important;
+  border-bottom: 0.5px solid var(--border2) !important;
+}
+.inv-expanded-content {
+  padding: 18px 20px;
+  background: var(--surface2);
+  border-top: 0.5px solid var(--border);
+  border-left: 2px solid var(--accent);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.inv-expanded-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+.inv-expanded-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--border);
+}
+.inv-row-selected td {
+  background: var(--accent-glow) !important;
+}
+@media (max-width: 1200px) {
+  .inv-expanded-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── ORDER EXPANDED DETAIL ── */
+.order-expanded {
+  border-top: 0.5px solid var(--border);
+  margin-top: 10px;
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.order-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.order-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  padding: 6px 0;
+  border-bottom: 0.5px solid var(--border);
+  color: var(--text);
+}
+.order-item-row:last-child {
+  border-bottom: none;
+}
+.order-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.order-action-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--border);
+  flex-direction: column;
+  align-items: flex-start;
+}
+.order-assign-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.order-assign-select {
+  background: var(--surface2);
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius-xs);
+  color: var(--text);
+  font-family: var(--font-syne), sans-serif;
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  cursor: pointer;
+  flex: 1;
+  min-width: 120px;
+}
+.order-assign-select:focus {
+  border-color: rgba(245, 166, 35, 0.4);
+}
+.order-status-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
