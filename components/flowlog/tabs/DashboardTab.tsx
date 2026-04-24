@@ -434,7 +434,7 @@ export function DashboardTab() {
       `For each order, use the assign_delivery tool. Skip orders that are already assigned, in transit, or delivered.`;
 
     const api = { getState: () => stateRef.current, dispatch };
-    dispatch({ type: "SET_ACTIVE_TAB", tab: "agent" });
+    dispatch({ type: "SET_ACTIVE_TAB", tab: "orders" });
     try {
       await runAgentLoop(prompt, api, "dispatch");
     } finally {
