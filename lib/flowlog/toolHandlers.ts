@@ -111,6 +111,7 @@ function getInventory(
       reorderQty: i.reorderQty,
       stockStatus: stockStatus(i),
       costPerUnit: i.costPerUnit,
+      weightPerUnitKg: i.weightPerUnitKg,
       supplierId: i.supplierId,
       nearestExpiry: nearestExpiry(i),
       notes: i.notes,
@@ -356,7 +357,7 @@ function assignDelivery(
 
   const orderWeight = order.items.reduce((s, it) => {
     const inv = getItem(data, it.inventoryId);
-    return s + it.qty * (inv ? 1 : 1);
+    return s + it.qty * (inv?.weightPerUnitKg ?? 1);
   }, 0);
   if (vehicle.currentLoadKg + orderWeight > vehicle.capacityKg) {
     return {
