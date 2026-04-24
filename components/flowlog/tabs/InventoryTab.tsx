@@ -236,11 +236,11 @@ function InventoryExpandedRow({ item }: { item: Inventory }) {
               <KV label="Lead Time" value={`${supplier.leadTimeDays} days`} />
               <KV
                 label="Reliability"
-                value={`${Math.round(supplier.reliabilityScore * 100)}%`}
+                value={`${supplier.reliabilityScore}%`}
                 color={
-                  supplier.reliabilityScore >= 0.9
+                  supplier.reliabilityScore >= 90
                     ? "var(--green)"
-                    : supplier.reliabilityScore >= 0.7
+                    : supplier.reliabilityScore >= 70
                       ? "var(--amber)"
                       : "var(--red)"
                 }
