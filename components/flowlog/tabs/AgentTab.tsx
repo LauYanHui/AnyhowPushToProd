@@ -139,6 +139,13 @@ export function AgentTab() {
   const hasInteracted = state.chat.length > 0;
   const activeProfile = PROFILES[state.activeAgentProfile];
 
+  useEffect(() => {
+    if (state.agentPrefill) {
+      setInput(state.agentPrefill);
+      dispatch({ type: "SET_AGENT_PREFILL", text: null });
+    }
+  }, [state.agentPrefill, dispatch]);
+
   const api = {
     getState: () => stateRef.current,
     dispatch,

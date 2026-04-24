@@ -33,6 +33,7 @@ export interface FlowLogState {
   anthropicMessages: AnthropicMessage[];
   agentRunning: boolean;
   activeAgentProfile: AgentProfileId;
+  agentPrefill: string | null;
   selectedEmailId: string | null;
   selectedReportId: string | null;
   plan: PlanResult | null;
@@ -60,7 +61,8 @@ export type Action =
   | { type: "SET_SELECTED_REPORT"; id: string | null }
   | { type: "SET_PLAN"; plan: PlanResult | null }
   | { type: "SET_PLAN_LOADING"; loading: boolean }
-  | { type: "SET_PLAN_ERROR"; error: string | null };
+  | { type: "SET_PLAN_ERROR"; error: string | null }
+  | { type: "SET_AGENT_PREFILL"; text: string | null };
 
 function reducer(state: FlowLogState, action: Action): FlowLogState {
   switch (action.type) {
@@ -135,6 +137,8 @@ function reducer(state: FlowLogState, action: Action): FlowLogState {
       return { ...state, planLoading: action.loading };
     case "SET_PLAN_ERROR":
       return { ...state, planError: action.error };
+    case "SET_AGENT_PREFILL":
+      return { ...state, agentPrefill: action.text };
   }
 }
 
@@ -149,6 +153,7 @@ function initialState(): FlowLogState {
     anthropicMessages: [],
     agentRunning: false,
     activeAgentProfile: "general",
+    agentPrefill: null,
     selectedEmailId: null,
     selectedReportId: null,
     plan: null,
