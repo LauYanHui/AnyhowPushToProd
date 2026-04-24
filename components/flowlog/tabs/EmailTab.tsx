@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/flowlog.module.css";
 import { runAgentLoop } from "@/lib/flowlog/agent";
 import { fmtTime, fmtDate } from "@/lib/flowlog/helpers";
@@ -81,11 +81,13 @@ function EmailList({
   emails,
   selectedId,
   onSelect,
+  onDiscard,
 }: {
   view: View;
   emails: Email[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onDiscard?: (id: string) => void;
 }) {
   const filtered = emails
     .filter((e) => classifyView(e) === view)
@@ -100,7 +102,7 @@ function EmailList({
         {view === "inbox"
           ? "Inbox is empty."
           : view === "drafts"
-            ? "No drafts — ask the Inbox Agent to triage an email."
+            ? "No drafts yet — chat with the Outbox Agent to compose one."
             : "No sent messages yet."}
       </div>
     );
@@ -109,12 +111,24 @@ function EmailList({
   return (
     <div className={styles["email-list"]}>
       {filtered.map((e) => (
-        <EmailRow
-          key={e.id}
-          email={e}
-          selected={selectedId === e.id}
-          onClick={() => onSelect(e.id)}
-        />
+        <div key={e.id} className={view === "drafts" ? styles["email-row-wrap"] : undefined}>
+          <EmailRow
+            email={e}
+            selected={selectedId === e.id}
+            onClick={() => onSelect(e.id)}
+          />
+          {view === "drafts" && onDiscard && (
+            <div className={styles["email-draft-row-actions"]}>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles["btn-sm"]}`}
+                onClick={() => onDiscard(e.id)}
+              >
+                Discard
+              </button>
+            </div>
+          )}
+        </div>
       ))}
     </div>
   );
@@ -283,38 +297,201 @@ function EmailBody({ email }: { email: Email }) {
   );
 }
 
-function ComposeBar() {
+const CHAT_MIN = 2;
+const CHAT_MAX = 500;
+
+function validateChatInput(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length < CHAT_MIN)
+    return "Message is too short.";
+  if (trimmed.length > CHAT_MAX)
+    return `Too long — keep it under ${CHAT_MAX} characters.`;
+  if (/<[a-z!][\s\S]*?>/i.test(trimmed))
+    return "HTML tags are not allowed.";
+  if (/javascript:|<script|on\w+\s*=/i.test(trimmed))
+    return "Message contains disallowed content.";
+  if (!/[a-z0-9]/i.test(trimmed))
+    return "Message must contain readable text.";
+  return null;
+}
+
+function OutboxMessage({ msg }: { msg: import("@/lib/flowlog/types").ChatDisplayMessage }) {
+  if (msg.kind === "user") {
+    return (
+      <div className={`${styles.msg} ${styles["msg-user"]}`}>
+        <div className={`${styles["msg-avatar"]} ${styles.user}`}>U</div>
+        <div className={styles["msg-bubble"]}>{msg.text}</div>
+      </div>
+    );
+  }
+  if (msg.kind === "ai") {
+    return (
+      <div className={`${styles.msg} ${styles["msg-ai"]}`}>
+        <div className={`${styles["msg-avatar"]} ${styles.ai}`}>AI</div>
+        <div className={styles["msg-bubble"]}>{msg.text}</div>
+      </div>
+    );
+  }
+  if (msg.kind === "thinking") {
+    return (
+      <div className={styles["thinking-block"]}>
+        <div className={styles.dots}>
+          <div className={styles.dot} />
+          <div className={styles.dot} />
+          <div className={styles.dot} />
+        </div>
+        Composing...
+      </div>
+    );
+  }
+  if (msg.kind === "error") {
+    return <div className={styles["error-block"]}>Error: {msg.text}</div>;
+  }
+  if (msg.kind === "tool_call" || msg.kind === "tool_result") {
+    const icon = msg.kind === "tool_call" ? "▶" : "✓";
+    return (
+      <div className={styles["tool-call-block"]} style={{ padding: "5px 10px" }}>
+        <div className={styles["tool-call-label"]} style={{ marginBottom: 0 }}>
+          {icon} {msg.toolName}
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+function OutboxChatPanel() {
   const { state, dispatch, stateRef } = useFlowLog();
-  const [prompt, setPrompt] = useState("");
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const [input, setInput] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
   const api = { getState: () => stateRef.current, dispatch };
 
-  async function compose() {
-    if (!prompt.trim() || state.agentRunning) return;
-    const instruction = prompt.trim();
-    setPrompt("");
-    await runAgentLoop(instruction, api, "outbox", { mode: "ephemeral" });
+  const outboxMessages = state.chat.filter((m) => m.profileId === "outbox");
+
+  const pendingDraft = [...state.data.emails]
+    .reverse()
+    .find((e) => e.status === "draft" && e.draftedBy === "agent");
+
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [outboxMessages.length]);
+
+  function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setInput(e.target.value);
+    if (validationError) setValidationError(null);
   }
 
+  async function send() {
+    if (state.agentRunning) return;
+    const error = validateChatInput(input);
+    if (error) { setValidationError(error); return; }
+    setValidationError(null);
+    const text = input.trim();
+    setInput("");
+    await runAgentLoop(text, api, "outbox");
+  }
+
+  async function sendDraft(id: string) {
+    if (state.agentRunning) return;
+    await runAgentLoop(
+      `Send the draft email ${id} now. Use send_email with email_id="${id}".`,
+      api,
+      "outbox",
+    );
+  }
+
+  const charCount = input.length;
+  const isOver = charCount > CHAT_MAX;
+
   return (
-    <div className={styles["email-compose-bar"]}>
-      <input
-        className={styles["search-input"]}
-        style={{ flex: 1, width: "auto" }}
-        placeholder='Ask Outbox Agent — e.g., "Send ETA update to Changi Airport on ORD-2026-008"'
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") void compose();
-        }}
-      />
-      <button
-        type="button"
-        className={`${styles.btn} ${styles["btn-accent"]} ${styles["btn-sm"]}`}
-        onClick={() => void compose()}
-        disabled={state.agentRunning || !prompt.trim()}
-      >
-        Compose with Outbox Agent
-      </button>
+    <div className={styles["outbox-chat-panel"]}>
+      <div className={styles["outbox-chat-header"]}>
+        <span>Outbox Agent</span>
+        {outboxMessages.length > 0 && (
+          <button
+            type="button"
+            className={`${styles.btn} ${styles["btn-sm"]}`}
+            onClick={() => dispatch({ type: "CLEAR_CHAT" })}
+            disabled={state.agentRunning}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {outboxMessages.length === 0 ? (
+        <div className={styles["outbox-chat-empty"]}>
+          <div>Describe the email you want to send.</div>
+          <div className={styles["text-hint"]} style={{ fontSize: "11px" }}>
+            e.g. "Draft an ETA update for the Changi Airport order" — the agent will ask if it needs more details.
+          </div>
+        </div>
+      ) : (
+        <div ref={messagesRef} className={styles["outbox-chat-messages"]}>
+          {outboxMessages.map((m) => (
+            <OutboxMessage key={m.id} msg={m} />
+          ))}
+        </div>
+      )}
+
+      {pendingDraft && (
+        <div className={styles["outbox-draft-banner"]}>
+          <span className={styles["outbox-draft-banner-label"]}>Draft ready:</span>
+          <span className={styles["outbox-draft-subject"]}>{pendingDraft.subject}</span>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles["btn-accent"]} ${styles["btn-sm"]}`}
+            onClick={() => void sendDraft(pendingDraft.id)}
+            disabled={state.agentRunning}
+          >
+            Send email
+          </button>
+        </div>
+      )}
+
+      <div className={styles["outbox-chat-input-wrap"]}>
+        <div className={styles["outbox-chat-input-row"]}>
+          <textarea
+            className={`${styles["outbox-chat-textarea"]} ${validationError ? styles.invalid : ""}`}
+            placeholder="Describe what to compose, or ask a follow-up…"
+            rows={1}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+            disabled={state.agentRunning}
+            aria-invalid={validationError ? true : undefined}
+          />
+          <button
+            type="button"
+            className={`${styles.btn} ${styles["btn-accent"]} ${styles["btn-sm"]}`}
+            onClick={() => void send()}
+            disabled={state.agentRunning || isOver || !input.trim()}
+          >
+            Send
+          </button>
+        </div>
+        <div className={styles["outbox-chat-meta"]}>
+          {validationError ? (
+            <span className={styles["compose-error"]}>{validationError}</span>
+          ) : (
+            <span className={styles["text-hint"]} style={{ fontSize: "10px" }}>
+              Enter to send · Shift+Enter for new line
+            </span>
+          )}
+          {charCount > 0 && (
+            <span className={`${styles["compose-count"]} ${isOver ? styles.over : ""}`}>
+              {charCount}/{CHAT_MAX}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -323,6 +500,10 @@ export function EmailTab() {
   const { state, dispatch } = useFlowLog();
   const { emails } = state.data;
   const [view, setView] = useState<View>("inbox");
+
+  function handleDiscard(id: string) {
+    dispatch({ type: "DELETE_EMAIL", id });
+  }
 
   const counts = useMemo(() => {
     const c: Record<View, number> = { inbox: 0, drafts: 0, sent: 0 };
@@ -383,8 +564,6 @@ export function EmailTab() {
         })}
       </div>
 
-      <ComposeBar />
-
       <div className={styles["email-layout"]}>
         <div className={styles["email-left"]}>
           <EmailList
@@ -392,17 +571,22 @@ export function EmailTab() {
             emails={emails}
             selectedId={state.selectedEmailId}
             onSelect={selectEmail}
+            onDiscard={view === "drafts" ? handleDiscard : undefined}
           />
         </div>
-        <div className={styles["email-right"]}>
-          {selectedEmail ? (
-            <EmailBody email={selectedEmail} />
-          ) : (
-            <div className={styles["empty-state"]}>
-              Select an email to view details.
-            </div>
-          )}
-        </div>
+        {view === "drafts" ? (
+          <OutboxChatPanel />
+        ) : (
+          <div className={styles["email-right"]}>
+            {selectedEmail ? (
+              <EmailBody email={selectedEmail} />
+            ) : (
+              <div className={styles["empty-state"]}>
+                Select an email to view details.
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

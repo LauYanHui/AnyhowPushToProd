@@ -53,8 +53,14 @@ export const PROFILES: Record<AgentProfileId, AgentProfile> = {
   outbox: {
     id: "outbox",
     label: "Outbox Agent",
-    tagline: "Proactive customer comms.",
-    toolNames: ["list_emails", "get_orders", "get_fleet_status", "send_email"],
+    tagline: "Proactive customer comms — delivery ETAs, delay notices, confirmations.",
+    toolNames: [
+      "list_emails",
+      "get_orders",
+      "get_fleet_status",
+      "draft_email",
+      "send_email",
+    ],
     suggestedPrompts: [
       "Send ETAs for today's orders.",
       "Notify the customer on ORD-2026-010.",

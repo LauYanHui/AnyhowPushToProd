@@ -56,6 +56,8 @@ export function executeTool(
         return { result: listEmails(input, data) };
       case "read_email":
         return readEmail(input, data);
+      case "draft_email":
+        return draftEmail(input, data);
       case "draft_email_reply":
         return draftEmailReply(input, data);
       case "send_email":
@@ -502,6 +504,52 @@ function readEmail(
             leadDays: relatedSupplier.leadTimeDays,
           }
         : null,
+    },
+    nextData,
+  };
+}
+
+function draftEmail(
+  input: Record<string, unknown>,
+  data: FlowLogData,
+): ToolResult {
+  const to = input.to as string;
+  const subject = input.subject as string;
+  const body = input.body as string;
+  const relatedOrderId = (input.related_order_id as string) ?? null;
+
+  if (!to || !subject || !body) {
+    return { result: { error: "draft_email requires to, subject, and body." } };
+  }
+
+  const draft: Email = {
+    id: nextEmailId(),
+    direction: "outgoing",
+    from: OPS_EMAIL,
+    to,
+    subject,
+    body,
+    receivedAt: new Date().toISOString(),
+    status: "draft",
+    category: "delivery_notification",
+    relatedOrderId,
+    relatedSupplierId: null,
+    draftedBy: "agent",
+    agentNotes: "",
+    replyToEmailId: null,
+  };
+  const nextData: FlowLogData = {
+    ...data,
+    emails: [...data.emails, draft],
+  };
+  return {
+    result: {
+      success: true,
+      draft_id: draft.id,
+      to: draft.to,
+      subject: draft.subject,
+      status: "draft",
+      note: "Saved as draft. User must approve before sending.",
     },
     nextData,
   };
