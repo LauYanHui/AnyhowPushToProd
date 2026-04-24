@@ -154,37 +154,6 @@ Workflow:
 Do NOT attempt to generate reports, modify inventory, or touch emails beyond send_email confirmations — those belong to other agents.`,
   },
 
-  reports: {
-    id: "reports",
-    label: "Reports Agent",
-    tagline: "Compiles the Genspark Daily Briefing from live analytics.",
-    toolNames: [
-      "get_inventory",
-      "get_orders",
-      "get_fleet_status",
-      "get_analytics",
-      "generate_daily_report",
-    ],
-    suggestedPrompts: [
-      "Generate today's Genspark Daily Briefing.",
-      "Build a daily report focused on delivery performance and expiry risk.",
-    ],
-    buildSystemPrompt: ({ todayStr }) =>
-      `${SHARED_CONTEXT(todayStr)}
-
-You are the REPORTS AGENT. You compile the "Genspark Daily Briefing" — a one-page executive report rendered as HTML inside the FlowLog app.
-
-Workflow:
-1. Call get_analytics with metric="daily_summary" to pull every KPI block in one shot.
-2. Optionally call get_orders, get_inventory, get_fleet_status for spot-checks or to pull specific rows into the narrative.
-3. Call generate_daily_report exactly once at the end with:
-   - summary: one short paragraph (2–3 sentences) for an executive skim
-   - html: a full HTML body (no <html>/<head> wrapper — just the content). Use semantic tags: <h2>, <h3>, <ul>, <table>, <p>, <strong>. Include inline style="..." for subtle accents if needed but keep it readable on a dark background. Title the report "Genspark Daily Briefing — <date>".
-   - metrics: the numeric fields extracted from get_analytics
-4. Structure the HTML body with these sections in order: Overview, KPIs, Delivery Performance, Inventory & Expiry Risk, Fleet Utilization, Alerts & Recommendations.
-
-Do not assign deliveries, mutate stock, send email, or write draft replies — you are a read-only analyst apart from generate_daily_report itself.`,
-  },
 };
 
 export function getToolsFor(

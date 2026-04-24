@@ -250,38 +250,4 @@ export const TOOLS = [
       required: ["email_id", "notes"],
     },
   },
-  {
-    name: "generate_daily_report",
-    description:
-      "Persist the Genspark Daily Briefing with summary, HTML body, and metrics.",
-    input_schema: {
-      type: "object",
-      properties: {
-        summary: { type: "string" },
-        html: { type: "string" },
-        metrics: {
-          type: "object",
-          properties: {
-            ordersDelivered: { type: "number" },
-            ordersPending: { type: "number" },
-            ordersFailed: { type: "number" },
-            inventoryValue: { type: "number" },
-            lowStockCount: { type: "number" },
-            expiryRiskValue: { type: "number" },
-            fleetUtilizationPct: { type: "number" },
-          },
-          required: [
-            "ordersDelivered",
-            "ordersPending",
-            "ordersFailed",
-            "inventoryValue",
-            "lowStockCount",
-            "expiryRiskValue",
-            "fleetUtilizationPct",
-          ],
-        },
-      },
-      required: ["summary", "html", "metrics"],
-    },
-  },
 ];

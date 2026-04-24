@@ -6,8 +6,6 @@ import {
   stockStatus,
 } from "./helpers";
 import type {
-  DailyReport,
-  DailyReportMetrics,
   Email,
   FlowLogData,
 } from "./types";
@@ -20,9 +18,6 @@ function nextEmailId(): string {
     .padStart(2, "0")}`;
 }
 
-function nextReportId(dateCovered: string): string {
-  return `RPT-${dateCovered}-${String(Date.now()).slice(-4)}`;
-}
 
 export interface ToolResult {
   result: unknown;
@@ -64,8 +59,6 @@ export function executeTool(
         return sendEmail(input, data);
       case "mark_email_handled":
         return markEmailHandled(input, data);
-      case "generate_daily_report":
-        return generateDailyReport(input, data);
       default:
         return { result: { error: `Unknown tool: ${name}` } };
     }
@@ -715,49 +708,3 @@ function markEmailHandled(
   };
 }
 
-function generateDailyReport(
-  input: Record<string, unknown>,
-  data: FlowLogData,
-): ToolResult {
-  const summary = input.summary as string;
-  const html = input.html as string;
-  const metrics = input.metrics as DailyReportMetrics;
-
-  if (!summary || !html || !metrics) {
-    return {
-      result: { error: "generate_daily_report requires summary, html, metrics" },
-    };
-  }
-
-  const now = new Date();
-  const dateCovered = now.toISOString().split("T")[0];
-  const title = `Genspark Daily Briefing — ${now.toLocaleDateString("en-SG", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })}`;
-
-  const report: DailyReport = {
-    id: nextReportId(dateCovered),
-    generatedAt: now.toISOString(),
-    dateCovered,
-    title,
-    summary,
-    html,
-    metrics,
-  };
-  const nextData: FlowLogData = {
-    ...data,
-    reports: [...data.reports, report],
-  };
-  return {
-    result: {
-      success: true,
-      report_id: report.id,
-      title: report.title,
-      dateCovered,
-      metrics,
-    },
-    nextData,
-  };
-}

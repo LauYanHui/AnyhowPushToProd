@@ -15,7 +15,6 @@ import type {
   AgentProfileId,
   AnthropicMessage,
   ChatDisplayMessage,
-  DailyReport,
   Driver,
   Email,
   FlowLogData,
@@ -39,7 +38,6 @@ export interface FlowLogState {
   activeAgentProfile: AgentProfileId;
   agentPrefill: string | null;
   selectedEmailId: string | null;
-  selectedReportId: string | null;
   plan: PlanResult | null;
   planLoading: boolean;
   planError: string | null;
@@ -62,9 +60,7 @@ export type Action =
   | { type: "APPEND_EMAIL"; email: Email }
   | { type: "UPDATE_EMAIL"; id: string; patch: Partial<Email> }
   | { type: "DELETE_EMAIL"; id: string }
-  | { type: "APPEND_REPORT"; report: DailyReport }
   | { type: "SET_SELECTED_EMAIL"; id: string | null }
-  | { type: "SET_SELECTED_REPORT"; id: string | null }
   | { type: "SET_PLAN"; plan: PlanResult | null }
   | { type: "SET_PLAN_LOADING"; loading: boolean }
   | { type: "SET_PLAN_ERROR"; error: string | null }
@@ -137,18 +133,8 @@ function reducer(state: FlowLogState, action: Action): FlowLogState {
         selectedEmailId:
           state.selectedEmailId === action.id ? null : state.selectedEmailId,
       };
-    case "APPEND_REPORT":
-      return {
-        ...state,
-        data: {
-          ...state.data,
-          reports: [...state.data.reports, action.report],
-        },
-      };
     case "SET_SELECTED_EMAIL":
       return { ...state, selectedEmailId: action.id };
-    case "SET_SELECTED_REPORT":
-      return { ...state, selectedReportId: action.id };
     case "SET_PLAN":
       return { ...state, plan: action.plan };
     case "SET_PLAN_LOADING":
@@ -219,7 +205,6 @@ function initialState(): FlowLogState {
     activeAgentProfile: "general",
     agentPrefill: null,
     selectedEmailId: null,
-    selectedReportId: null,
     apiKey:
       (typeof window !== "undefined"
         ? localStorage.getItem("flowlog:apiKey")

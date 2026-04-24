@@ -426,8 +426,6 @@ export function seedData(): FlowLogData {
     },
   ];
 
-  const reports: FlowLogData["reports"] = [];
-
   return {
     suppliers,
     inventory,
@@ -436,6 +434,5 @@ export function seedData(): FlowLogData {
     orders,
     reorders,
     emails,
-    reports,
   };
 }
