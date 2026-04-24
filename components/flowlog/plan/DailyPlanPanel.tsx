@@ -23,9 +23,11 @@ interface Props {
   result: PlanResult | null;
   loading: boolean;
   error: string | null;
+  onApply?: () => void;
+  applyLoading?: boolean;
 }
 
-export function DailyPlanPanel({ result, loading, error }: Props) {
+export function DailyPlanPanel({ result, loading, error, onApply, applyLoading }: Props) {
   if (loading) {
     return (
       <>
@@ -258,6 +260,20 @@ export function DailyPlanPanel({ result, loading, error }: Props) {
             </table>
           </div>
         </>
+      )}
+
+      {onApply && (
+        <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles["btn-accent"]}`}
+            onClick={onApply}
+            disabled={applyLoading}
+            id="apply-daily-plan"
+          >
+            {applyLoading ? "Applying Plan…" : "✓ Apply Plan — Assign All Orders"}
+          </button>
+        </div>
       )}
     </>
   );
