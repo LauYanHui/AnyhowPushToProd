@@ -1437,11 +1437,11 @@
   color: var(--text);
   font-size: 13px;
   padding: 8px 12px;
-  resize: none;
+  resize: vertical;
   font-family: inherit;
   line-height: 1.5;
   min-height: 36px;
-  max-height: 100px;
+  max-height: 50vh;
   outline: none;
 }
 .outbox-chat-textarea:focus {
