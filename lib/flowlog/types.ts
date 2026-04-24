@@ -42,7 +42,7 @@ export interface Inventory {
   reorderQty: number;
   maxCapacity: number;
   costPerUnit: number;
-  weightPerUnitKg: number;
+  weightPerUnitKg?: number;
   sellPrice: number;
   supplierId: string;
   warehouseZone: string;
@@ -202,7 +202,6 @@ export type TabId =
   | "dashboard"
   | "inventory"
   | "orders"
-  | "agent"
   | "emails"
   | "reports";
 

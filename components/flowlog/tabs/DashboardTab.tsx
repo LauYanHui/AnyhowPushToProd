@@ -415,7 +415,6 @@ export function DashboardTab() {
     if (!plan || state.agentRunning || applyLoading) return;
     setApplyLoading(true);
 
-    // Build a concise dispatch prompt from the delivery plan
     const assignments = plan.deliveryPlan
       .map(
         (d) =>

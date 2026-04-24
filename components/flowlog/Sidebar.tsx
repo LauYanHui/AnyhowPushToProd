@@ -4,7 +4,6 @@ import styles from "@/app/flowlog.module.css";
 import { useFlowLog } from "@/lib/flowlog/state";
 import type { TabId } from "@/lib/flowlog/types";
 import {
-  AgentIcon,
   DashboardIcon,
   EmailIcon,
   InventoryIcon,
@@ -19,7 +18,6 @@ const NAV: Array<{ id: TabId; label: string; Icon: () => React.JSX.Element }> = 
   { id: "orders", label: "Deliveries", Icon: OrdersIcon },
   { id: "emails", label: "Emails", Icon: EmailIcon },
   { id: "reports", label: "Reports", Icon: ReportsIcon },
-  { id: "agent", label: "AI Agents", Icon: AgentIcon },
 ];
 
 export function Sidebar() {

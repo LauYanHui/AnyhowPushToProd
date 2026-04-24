@@ -39,6 +39,7 @@ export interface FlowLogState {
   plan: PlanResult | null;
   planLoading: boolean;
   planError: string | null;
+  chatOpen: boolean;
 }
 
 export type Action =
@@ -62,7 +63,8 @@ export type Action =
   | { type: "SET_PLAN"; plan: PlanResult | null }
   | { type: "SET_PLAN_LOADING"; loading: boolean }
   | { type: "SET_PLAN_ERROR"; error: string | null }
-  | { type: "SET_AGENT_PREFILL"; text: string | null };
+  | { type: "SET_AGENT_PREFILL"; text: string | null }
+  | { type: "SET_CHAT_OPEN"; open: boolean };
 
 function reducer(state: FlowLogState, action: Action): FlowLogState {
   switch (action.type) {
@@ -139,6 +141,8 @@ function reducer(state: FlowLogState, action: Action): FlowLogState {
       return { ...state, planError: action.error };
     case "SET_AGENT_PREFILL":
       return { ...state, agentPrefill: action.text };
+    case "SET_CHAT_OPEN":
+      return { ...state, chatOpen: action.open };
   }
 }
 
@@ -159,6 +163,7 @@ function initialState(): FlowLogState {
     plan: null,
     planLoading: false,
     planError: null,
+    chatOpen: false,
   };
 }
 
