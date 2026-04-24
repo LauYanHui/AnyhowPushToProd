@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import styles from "@/app/flowlog.module.css";
 import { runAgentLoop } from "@/lib/flowlog/agent";
 import {
@@ -10,8 +11,11 @@ import {
   withinNextDays,
   orderIsUpcomingWithinMinutes,
 } from "@/lib/flowlog/helpers";
+import { toPlanInput } from "@/lib/flowlog/planAdapter";
+import type { PlanResult } from "@/lib/flowlog/planTypes";
 import { useFlowLog } from "@/lib/flowlog/state";
 import type { TabId } from "@/lib/flowlog/types";
+import { DailyPlanPanel } from "../plan/DailyPlanPanel";
 import { PriorityDot, StatusPill } from "../ui";
 
 type AgentRunShortcut = "dispatch-all" | "triage-inbox";
@@ -339,6 +343,11 @@ function RecentDeliveries() {
 }
 
 export function DashboardTab() {
+  const { state } = useFlowLog();
+  const [plan, setPlan] = useState<PlanResult | null>(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+
   const dateStr = new Date().toLocaleDateString("en-SG", {
     weekday: "long",
     year: "numeric",
@@ -346,12 +355,49 @@ export function DashboardTab() {
     day: "numeric",
   });
 
+  async function generatePlan() {
+    setPlanLoading(true);
+    setPlanError(null);
+    setPlan(null);
+    try {
+      const body = toPlanInput(state.data);
+      const res = await fetch("/api/plan", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const msg =
+          data?.error?.message ??
+          (typeof data?.error === "string" ? data.error : `HTTP ${res.status}`);
+        setPlanError(msg);
+        return;
+      }
+      setPlan(data as PlanResult);
+    } catch (e) {
+      setPlanError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPlanLoading(false);
+    }
+  }
+
   return (
     <section className={styles["tab-section"]}>
       <div className={styles["page-header"]}>
         <div>
           <h1>Operations Dashboard</h1>
           <div className={styles["dash-date"]}>{dateStr}</div>
+        </div>
+        <div className={styles["header-actions"]}>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles["btn-accent"]}`}
+            onClick={() => void generatePlan()}
+            disabled={planLoading}
+          >
+            {planLoading ? "Generating..." : "Generate Daily Plan"}
+          </button>
         </div>
       </div>
       <Kpis />
@@ -369,6 +415,13 @@ export function DashboardTab() {
           <FleetCard />
         </div>
       </div>
+      {(planLoading || planError || plan) && (
+        <DailyPlanPanel
+          result={plan}
+          loading={planLoading}
+          error={planError}
+        />
+      )}
       <div className={styles["sec-lbl"]}>Recent Deliveries</div>
       <RecentDeliveries />
     </section>
