@@ -18,7 +18,8 @@ import { DailyPlanPanel } from "../plan/DailyPlanPanel";
 import { PriorityDot, StatusPill } from "../ui";
 
 type AlertAction =
-  | { kind: "tab"; label: string; tab: TabId; prefill?: string; profile?: AgentProfileId }
+  | { kind: "tab"; label: string; tab: TabId }
+  | { kind: "chat"; label: string; prefill: string; profile: AgentProfileId }
   | { kind: "run"; label: string; prompt: string; profile: AgentProfileId };
 
 interface Alert {
@@ -71,9 +72,8 @@ function useAlerts(): Alert[] {
           text: `${i.name} — ${e.qty} ${i.unit}s expire ${fmtDate(e.expiresOn)}`,
           actions: [
             {
-              kind: "tab",
+              kind: "chat",
               label: "Ask Agent",
-              tab: "agent",
               profile: "general",
               prefill: `${i.name} has ${e.qty} ${i.unit}(s) expiring on ${fmtDate(e.expiresOn)} — that's critical. What should I do to minimise waste?`,
             },
@@ -85,9 +85,8 @@ function useAlerts(): Alert[] {
           text: `${i.name} — ${e.qty} ${i.unit}s expire ${fmtDate(e.expiresOn)}`,
           actions: [
             {
-              kind: "tab",
+              kind: "chat",
               label: "Ask Agent",
-              tab: "agent",
               profile: "general",
               prefill: `${i.name} has ${e.qty} ${i.unit}(s) expiring on ${fmtDate(e.expiresOn)}. What options do I have to use them before they expire?`,
             },
@@ -105,9 +104,8 @@ function useAlerts(): Alert[] {
         text: `${i.name} below reorder point (${i.currentStock}/${i.reorderPoint} ${i.unit})`,
         actions: [
           {
-            kind: "tab",
+            kind: "chat",
             label: "Reorder",
-            tab: "agent",
             profile: "outbox",
             prefill: `${i.name} is at ${i.currentStock} ${i.unit}(s), below the reorder point of ${i.reorderPoint}. Please draft a reorder email to our supplier.`,
           },
@@ -233,7 +231,7 @@ function AlertsCard() {
   async function runAction(prompt: string, profile: AgentProfileId) {
     if (state.agentRunning) return;
     dispatch({ type: "SET_ACTIVE_PROFILE", profile });
-    dispatch({ type: "SET_ACTIVE_TAB", tab: "agent" });
+    dispatch({ type: "SET_CHAT_OPEN", open: true });
     await runAgentLoop(prompt, api, profile, { mode: "ephemeral" });
   }
 
@@ -261,12 +259,19 @@ function AlertsCard() {
                   key={ai}
                   type="button"
                   className={styles["alert-action"]}
+                  onClick={() => dispatch({ type: "SET_ACTIVE_TAB", tab: ac.tab })}
+                >
+                  {ac.label}
+                </button>
+              ) : ac.kind === "chat" ? (
+                <button
+                  key={ai}
+                  type="button"
+                  className={styles["alert-action"]}
                   onClick={() => {
-                    if (ac.profile)
-                      dispatch({ type: "SET_ACTIVE_PROFILE", profile: ac.profile });
-                    if (ac.prefill)
-                      dispatch({ type: "SET_AGENT_PREFILL", text: ac.prefill });
-                    dispatch({ type: "SET_ACTIVE_TAB", tab: ac.tab });
+                    dispatch({ type: "SET_ACTIVE_PROFILE", profile: ac.profile });
+                    dispatch({ type: "SET_AGENT_PREFILL", text: ac.prefill });
+                    dispatch({ type: "SET_CHAT_OPEN", open: true });
                   }}
                 >
                   {ac.label}

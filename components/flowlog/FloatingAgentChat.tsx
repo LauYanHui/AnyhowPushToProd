@@ -132,6 +132,13 @@ export function FloatingAgentChat() {
   const activeProfile = PROFILES[state.activeAgentProfile];
   const hasInteracted = state.chat.length > 0;
 
+  useEffect(() => {
+    if (state.agentPrefill) {
+      setInput(state.agentPrefill);
+      dispatch({ type: "SET_AGENT_PREFILL", text: null });
+    }
+  }, [state.agentPrefill, dispatch]);
+
   // Keep posRef in sync so listeners read the latest value without re-binding.
   useEffect(() => {
     posRef.current = pos;
