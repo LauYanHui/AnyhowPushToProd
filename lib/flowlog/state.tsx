@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { seedData } from "./seed";
+import type { PlanResult } from "./planTypes";
 import type {
   AgentProfileId,
   AnthropicMessage,
@@ -34,6 +35,9 @@ export interface FlowLogState {
   activeAgentProfile: AgentProfileId;
   selectedEmailId: string | null;
   selectedReportId: string | null;
+  plan: PlanResult | null;
+  planLoading: boolean;
+  planError: string | null;
 }
 
 export type Action =
@@ -53,7 +57,10 @@ export type Action =
   | { type: "DELETE_EMAIL"; id: string }
   | { type: "APPEND_REPORT"; report: DailyReport }
   | { type: "SET_SELECTED_EMAIL"; id: string | null }
-  | { type: "SET_SELECTED_REPORT"; id: string | null };
+  | { type: "SET_SELECTED_REPORT"; id: string | null }
+  | { type: "SET_PLAN"; plan: PlanResult | null }
+  | { type: "SET_PLAN_LOADING"; loading: boolean }
+  | { type: "SET_PLAN_ERROR"; error: string | null };
 
 function reducer(state: FlowLogState, action: Action): FlowLogState {
   switch (action.type) {
@@ -122,6 +129,12 @@ function reducer(state: FlowLogState, action: Action): FlowLogState {
       return { ...state, selectedEmailId: action.id };
     case "SET_SELECTED_REPORT":
       return { ...state, selectedReportId: action.id };
+    case "SET_PLAN":
+      return { ...state, plan: action.plan };
+    case "SET_PLAN_LOADING":
+      return { ...state, planLoading: action.loading };
+    case "SET_PLAN_ERROR":
+      return { ...state, planError: action.error };
   }
 }
 
@@ -138,6 +151,9 @@ function initialState(): FlowLogState {
     activeAgentProfile: "general",
     selectedEmailId: null,
     selectedReportId: null,
+    plan: null,
+    planLoading: false,
+    planError: null,
   };
 }
 

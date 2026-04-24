@@ -77,6 +77,17 @@ export function Sidebar() {
       </div>
 
       <div className={styles["sidebar-footer"]}>
+        {state.planLoading && (
+          <button
+            type="button"
+            className={styles["plan-indicator"]}
+            onClick={() => dispatch({ type: "SET_ACTIVE_TAB", tab: "dashboard" })}
+          >
+            <span className={styles["plan-indicator-dot"]} />
+            <span className={styles["plan-indicator-text"]}>Generating daily plan…</span>
+            <span className={styles["plan-indicator-arrow"]}>→</span>
+          </button>
+        )}
         <div className={styles["api-hint"]}>
           Agents run server-side via /api/agent. Set{" "}
           <span className={styles.mono}>ANTHROPIC_API_KEY</span> in{" "}

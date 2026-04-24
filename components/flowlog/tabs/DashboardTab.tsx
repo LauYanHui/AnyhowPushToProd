@@ -12,7 +12,6 @@ import {
   orderIsUpcomingWithinMinutes,
 } from "@/lib/flowlog/helpers";
 import { toPlanInput } from "@/lib/flowlog/planAdapter";
-import type { PlanResult } from "@/lib/flowlog/planTypes";
 import { useFlowLog } from "@/lib/flowlog/state";
 import type { TabId } from "@/lib/flowlog/types";
 import { DailyPlanPanel } from "../plan/DailyPlanPanel";
@@ -346,9 +345,7 @@ function RecentDeliveries() {
 
 export function DashboardTab() {
   const { state, dispatch, stateRef } = useFlowLog();
-  const [plan, setPlan] = useState<PlanResult | null>(null);
-  const [planLoading, setPlanLoading] = useState(false);
-  const [planError, setPlanError] = useState<string | null>(null);
+  const { plan, planLoading, planError } = state;
   const [applyLoading, setApplyLoading] = useState(false);
 
   const dateStr = new Date().toLocaleDateString("en-SG", {
@@ -359,9 +356,9 @@ export function DashboardTab() {
   });
 
   async function generatePlan() {
-    setPlanLoading(true);
-    setPlanError(null);
-    setPlan(null);
+    dispatch({ type: "SET_PLAN_LOADING", loading: true });
+    dispatch({ type: "SET_PLAN_ERROR", error: null });
+    dispatch({ type: "SET_PLAN", plan: null });
     try {
       const body = toPlanInput(state.data);
       const res = await fetch("/api/plan", {
@@ -374,14 +371,14 @@ export function DashboardTab() {
         const msg =
           data?.error?.message ??
           (typeof data?.error === "string" ? data.error : `HTTP ${res.status}`);
-        setPlanError(msg);
+        dispatch({ type: "SET_PLAN_ERROR", error: msg });
         return;
       }
-      setPlan(data as PlanResult);
+      dispatch({ type: "SET_PLAN", plan: data });
     } catch (e) {
-      setPlanError(e instanceof Error ? e.message : String(e));
+      dispatch({ type: "SET_PLAN_ERROR", error: e instanceof Error ? e.message : String(e) });
     } finally {
-      setPlanLoading(false);
+      dispatch({ type: "SET_PLAN_LOADING", loading: false });
     }
   }
 

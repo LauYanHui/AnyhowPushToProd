@@ -10,7 +10,6 @@ import type {
   FulfillmentOrderResult,
   PlanDriver,
   PlanInput,
-  PlanInventory,
   PlanOrder,
 } from "@/lib/flowlog/planTypes";
 
@@ -18,35 +17,41 @@ const MODEL = "claude-sonnet-4-6";
 
 function buildPrompt(
   orders: PlanOrder[],
-  inventory: PlanInventory[],
   drivers: PlanDriver[],
   fulfillment: FulfillmentOrderResult[],
   expiring: ExpiryCheckResult[],
   deliveryRisks: DeliveryRisk[],
 ): string {
+  // Strip items from orders — item details are already in the fulfillment block.
+  const ordersMeta = orders.map(({ orderId, customer, zone, deliveryTime, priority }) => ({
+    orderId, customer, zone, deliveryTime, priority,
+  }));
+
+  // Only send available drivers; unavailable ones can't be assigned anyway.
+  const availableDrivers = drivers
+    .filter((d) => d.available)
+    .map(({ driverId, name, startTime, zone }) => ({ driverId, name, startTime, zone }));
+
   return `You are a logistics operations AI for a food distribution company. Analyse the data below and produce a structured daily plan.
 
 ## INPUT DATA
 
 ### Orders (${orders.length} total)
-${JSON.stringify(orders, null, 2)}
+${JSON.stringify(ordersMeta)}
 
-### Inventory
-${JSON.stringify(inventory, null, 2)}
-
-### Drivers (${drivers.length} total, ${drivers.filter((d) => d.available).length} available)
-${JSON.stringify(drivers, null, 2)}
+### Available drivers (${availableDrivers.length} of ${drivers.length})
+${JSON.stringify(availableDrivers)}
 
 ## PRE-COMPUTED CHECKS
 
-### Fulfilment status
-${JSON.stringify(fulfillment, null, 2)}
+### Fulfilment status (includes per-order item details)
+${JSON.stringify(fulfillment)}
 
 ### Expiring stock (within 3 days)
-${JSON.stringify(expiring, null, 2)}
+${JSON.stringify(expiring)}
 
 ### Delivery timing risks
-${JSON.stringify(deliveryRisks, null, 2)}
+${JSON.stringify(deliveryRisks)}
 
 ## YOUR TASK
 
@@ -69,8 +74,12 @@ Return a JSON object with exactly these keys:
     "totalOrders": number,
     "canFulfil": number,
     "atRisk": number,
-    "urgent": string,
-    "recommendation": string
+    "escalations": [
+      { "severity": "CRITICAL" | "HIGH" | "MEDIUM", "title": string, "detail": string, "orderIds": string[] }
+    ],
+    "actions": [
+      { "priority": number, "action": string }
+    ]
   }
 }
 
@@ -124,14 +133,13 @@ export async function POST(req: Request) {
   try {
     const message = await client.messages.create({
       model: MODEL,
-      max_tokens: 16000,
+      max_tokens: 8192,
       system: "You are a precise logistics AI. Always respond with valid JSON only.",
       messages: [
         {
           role: "user",
           content: buildPrompt(
             orders,
-            inventory,
             drivers,
             fulfillment,
             expiring,
@@ -187,7 +195,7 @@ export async function POST(req: Request) {
             ? "Model hit max_tokens cap; output was truncated before valid JSON could be produced. Increase max_tokens or reduce input."
             : "Claude returned invalid JSON",
           stop_reason: stopReason,
-          raw,
+          raw: raw.slice(0, 500),
         },
       },
       { status: 502 },
