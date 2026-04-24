@@ -81,12 +81,14 @@ function EmailList({
   emails,
   selectedId,
   onSelect,
+  onApprove,
   onDiscard,
 }: {
   view: View;
   emails: Email[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onApprove?: (id: string) => void;
   onDiscard?: (id: string) => void;
 }) {
   const filtered = emails
@@ -117,15 +119,34 @@ function EmailList({
             selected={selectedId === e.id}
             onClick={() => onSelect(e.id)}
           />
-          {view === "drafts" && onDiscard && (
+          {view === "drafts" && selectedId === e.id && (
+            <div className={styles["draft-preview"]}>
+              <div className={styles["draft-preview-meta"]}>
+                To: {e.to}
+              </div>
+              <div className={styles["draft-preview-body"]}>{e.body}</div>
+            </div>
+          )}
+          {view === "drafts" && (onApprove || onDiscard) && (
             <div className={styles["email-draft-row-actions"]}>
-              <button
-                type="button"
-                className={`${styles.btn} ${styles["btn-sm"]}`}
-                onClick={() => onDiscard(e.id)}
-              >
-                Discard
-              </button>
+              {onApprove && (
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles["btn-accent"]} ${styles["btn-sm"]}`}
+                  onClick={() => onApprove(e.id)}
+                >
+                  Approve &amp; send
+                </button>
+              )}
+              {onDiscard && (
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles["btn-sm"]}`}
+                  onClick={() => onDiscard(e.id)}
+                >
+                  Discard
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -196,7 +217,6 @@ function EmailBody({ email }: { email: Email }) {
       `Triage incoming email ${email.id}. Read it, pull related order/supplier context, and either draft a reply with draft_email_reply or mark_email_handled if no reply is needed.`,
       api,
       "inbox",
-      { mode: "ephemeral" },
     );
     setBusy(false);
   }
@@ -208,7 +228,6 @@ function EmailBody({ email }: { email: Email }) {
       `Send the draft email ${email.id} now. Use send_email with email_id="${email.id}".`,
       api,
       "outbox",
-      { mode: "ephemeral" },
     );
     setBusy(false);
   }
@@ -497,9 +516,20 @@ function OutboxChatPanel() {
 }
 
 export function EmailTab() {
-  const { state, dispatch } = useFlowLog();
+  const { state, dispatch, stateRef } = useFlowLog();
   const { emails } = state.data;
   const [view, setView] = useState<View>("inbox");
+  const api = { getState: () => stateRef.current, dispatch };
+
+  async function handleApprove(id: string) {
+    if (state.agentRunning) return;
+    await runAgentLoop(
+      `Send the draft email ${id} now. Use send_email with email_id="${id}".`,
+      api,
+      "outbox",
+    );
+    setView("sent");
+  }
 
   function handleDiscard(id: string) {
     dispatch({ type: "DELETE_EMAIL", id });
@@ -571,6 +601,7 @@ export function EmailTab() {
             emails={emails}
             selectedId={state.selectedEmailId}
             onSelect={selectEmail}
+            onApprove={view === "drafts" ? handleApprove : undefined}
             onDiscard={view === "drafts" ? handleDiscard : undefined}
           />
         </div>
