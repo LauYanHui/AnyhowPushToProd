@@ -116,6 +116,7 @@ export function ReportsTab() {
       "Generate today's Genspark Daily Briefing. Follow the Reports Agent workflow exactly.",
       api,
       "reports",
+      { mode: "ephemeral" },
     );
   }
 

@@ -196,6 +196,7 @@ function EmailBody({ email }: { email: Email }) {
       `Triage incoming email ${email.id}. Read it, pull related order/supplier context, and either draft a reply with draft_email_reply or mark_email_handled if no reply is needed.`,
       api,
       "inbox",
+      { mode: "ephemeral" },
     );
     setBusy(false);
   }
@@ -207,6 +208,7 @@ function EmailBody({ email }: { email: Email }) {
       `Send the draft email ${email.id} now. Use send_email with email_id="${email.id}".`,
       api,
       "outbox",
+      { mode: "ephemeral" },
     );
     setBusy(false);
   }

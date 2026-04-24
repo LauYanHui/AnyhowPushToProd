@@ -42,6 +42,7 @@ export interface Inventory {
   reorderQty: number;
   maxCapacity: number;
   costPerUnit: number;
+  weightPerUnitKg: number;
   sellPrice: number;
   supplierId: string;
   warehouseZone: string;

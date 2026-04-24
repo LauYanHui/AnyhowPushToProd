@@ -113,6 +113,7 @@ function getInventory(
       reorderQty: i.reorderQty,
       stockStatus: stockStatus(i),
       costPerUnit: i.costPerUnit,
+      weightPerUnitKg: i.weightPerUnitKg,
       supplierId: i.supplierId,
       nearestExpiry: nearestExpiry(i),
       notes: i.notes,
@@ -137,14 +138,12 @@ function getOrders(
       id: o.id,
       status: o.status,
       priority: o.priority,
-      customerName: o.customerName,
-      customerAddress: o.customerAddress,
-      deliveryWindow: o.deliveryWindow,
-      assignedDriverId: o.assignedDriverId,
-      assignedVehicleId: o.assignedVehicleId,
-      totalValue: o.totalValue,
-      items: o.items,
-      notes: o.notes,
+      customer: o.customerName,
+      window: `${fmtTime(o.deliveryWindow.earliest)}-${fmtTime(o.deliveryWindow.latest)}`,
+      driver: o.assignedDriverId,
+      vehicle: o.assignedVehicleId,
+      value: o.totalValue,
+      itemCount: o.items.length,
     })),
   };
 }
@@ -163,33 +162,23 @@ function getFleetStatus(
   return {
     vehicles: vehicles.map((v) => ({
       id: v.id,
-      plateNumber: v.plateNumber,
+      plate: v.plateNumber,
       type: v.type,
       status: v.status,
-      capacityKg: v.capacityKg,
-      currentLoadKg: v.currentLoadKg,
-      utilizationPct: Math.round((v.currentLoadKg / v.capacityKg) * 100),
-      fuelLevelPct: v.fuelLevelPct,
-      currentDriverId: v.currentDriverId,
-      currentLocation: v.currentLocation,
+      capKg: v.capacityKg,
+      loadKg: v.currentLoadKg,
+      driver: v.currentDriverId,
     })),
     drivers: data.drivers.map((d) => ({
       id: d.id,
       name: d.name,
-      phone: d.phone,
       status: d.status,
-      currentVehicleId: d.currentVehicleId,
-      currentOrderId: d.currentOrderId,
-      hoursWorkedToday: d.hoursWorkedToday,
-      deliveriesCompletedToday: d.deliveriesCompletedToday,
+      vehicle: d.currentVehicleId,
+      order: d.currentOrderId,
     })),
     summary: {
-      availableVehicles: data.vehicles.filter((v) => v.status === "available")
-        .length,
-      availableDrivers: data.drivers.filter((d) => d.status === "available")
-        .length,
-      onRouteVehicles: data.vehicles.filter((v) => v.status === "on_route")
-        .length,
+      availVeh: data.vehicles.filter((v) => v.status === "available").length,
+      availDrv: data.drivers.filter((d) => d.status === "available").length,
     },
   };
 }
@@ -370,7 +359,7 @@ function assignDelivery(
 
   const orderWeight = order.items.reduce((s, it) => {
     const inv = getItem(data, it.inventoryId);
-    return s + it.qty * (inv ? 1 : 1);
+    return s + it.qty * (inv?.weightPerUnitKg ?? 1);
   }, 0);
   if (vehicle.currentLoadKg + orderWeight > vehicle.capacityKg) {
     return {
@@ -434,7 +423,7 @@ function listEmails(
   const direction = (input.direction as string) ?? "all";
   const status = (input.status as string) ?? "all";
   const category = input.category as string | undefined;
-  const limit = (input.limit as number) ?? 20;
+  const limit = (input.limit as number) ?? 10;
 
   let emails = data.emails.slice();
   if (direction !== "all")
@@ -449,23 +438,16 @@ function listEmails(
 
   const trimmed = emails.slice(0, limit).map((e) => ({
     id: e.id,
-    direction: e.direction,
+    dir: e.direction,
     status: e.status,
-    category: e.category,
+    cat: e.category,
     from: e.from,
-    to: e.to,
     subject: e.subject,
-    receivedAt: e.receivedAt,
-    relatedOrderId: e.relatedOrderId,
-    relatedSupplierId: e.relatedSupplierId,
-    preview: e.body.slice(0, 140),
+    order: e.relatedOrderId,
+    preview: e.body.slice(0, 60),
   }));
 
-  return {
-    count: trimmed.length,
-    total: emails.length,
-    emails: trimmed,
-  };
+  return { count: trimmed.length, total: emails.length, emails: trimmed };
 }
 
 function readEmail(
@@ -496,36 +478,30 @@ function readEmail(
   return {
     result: {
       id: email.id,
-      direction: email.direction,
+      dir: email.direction,
       from: email.from,
       to: email.to,
       subject: email.subject,
-      body: email.body,
-      receivedAt: email.receivedAt,
-      status: nextData ? "read" : email.status,
-      category: email.category,
-      relatedOrderId: email.relatedOrderId,
-      relatedSupplierId: email.relatedSupplierId,
+      body: email.body.slice(0, 800),
+      cat: email.category,
+      order: email.relatedOrderId,
       relatedOrder: relatedOrder
         ? {
             id: relatedOrder.id,
             status: relatedOrder.status,
             priority: relatedOrder.priority,
-            customerName: relatedOrder.customerName,
-            customerAddress: relatedOrder.customerAddress,
-            deliveryWindow: relatedOrder.deliveryWindow,
-            assignedDriverId: relatedOrder.assignedDriverId,
-            assignedVehicleId: relatedOrder.assignedVehicleId,
-            totalValue: relatedOrder.totalValue,
-            notes: relatedOrder.notes,
+            customer: relatedOrder.customerName,
+            window: `${fmtTime(relatedOrder.deliveryWindow.earliest)}-${fmtTime(relatedOrder.deliveryWindow.latest)}`,
+            driver: relatedOrder.assignedDriverId,
+            vehicle: relatedOrder.assignedVehicleId,
+            notes: relatedOrder.notes.slice(0, 120),
           }
         : null,
       relatedSupplier: relatedSupplier
         ? {
             id: relatedSupplier.id,
             name: relatedSupplier.name,
-            contactEmail: relatedSupplier.contactEmail,
-            leadTimeDays: relatedSupplier.leadTimeDays,
+            leadDays: relatedSupplier.leadTimeDays,
           }
         : null,
     },

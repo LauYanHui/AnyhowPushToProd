@@ -201,12 +201,14 @@ function AlertsCard() {
         "Assign all pending orders using the best available driver and vehicle. Prioritise urgent orders and check capacity carefully.",
         api,
         "dispatch",
+        { mode: "ephemeral" },
       );
     } else if (run === "triage-inbox") {
       await runAgentLoop(
         "List all unread incoming emails and triage each one — draft replies where appropriate, mark informational mail as handled.",
         api,
         "inbox",
+        { mode: "ephemeral" },
       );
     }
   }
@@ -343,10 +345,11 @@ function RecentDeliveries() {
 }
 
 export function DashboardTab() {
-  const { state } = useFlowLog();
+  const { state, dispatch, stateRef } = useFlowLog();
   const [plan, setPlan] = useState<PlanResult | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
+  const [applyLoading, setApplyLoading] = useState(false);
 
   const dateStr = new Date().toLocaleDateString("en-SG", {
     weekday: "long",
@@ -379,6 +382,33 @@ export function DashboardTab() {
       setPlanError(e instanceof Error ? e.message : String(e));
     } finally {
       setPlanLoading(false);
+    }
+  }
+
+  async function applyPlan() {
+    if (!plan || state.agentRunning || applyLoading) return;
+    setApplyLoading(true);
+
+    // Build a concise dispatch prompt from the delivery plan
+    const assignments = plan.deliveryPlan
+      .map(
+        (d) =>
+          `• ${d.orderId} → driver "${d.driver}", time ${d.timeSlot}, items: ${d.items}`,
+      )
+      .join("\n");
+
+    const prompt =
+      `Apply the following daily delivery plan by assigning each pending order to the specified driver and a suitable available vehicle. ` +
+      `Prioritise urgent orders first and check vehicle capacity.\n\n` +
+      `Delivery Plan:\n${assignments}\n\n` +
+      `For each order, use the assign_delivery tool. Skip orders that are already assigned, in transit, or delivered.`;
+
+    const api = { getState: () => stateRef.current, dispatch };
+    dispatch({ type: "SET_ACTIVE_TAB", tab: "agent" });
+    try {
+      await runAgentLoop(prompt, api, "dispatch");
+    } finally {
+      setApplyLoading(false);
     }
   }
 
@@ -420,6 +450,8 @@ export function DashboardTab() {
           result={plan}
           loading={planLoading}
           error={planError}
+          onApply={plan ? () => void applyPlan() : undefined}
+          applyLoading={applyLoading}
         />
       )}
       <div className={styles["sec-lbl"]}>Recent Deliveries</div>
