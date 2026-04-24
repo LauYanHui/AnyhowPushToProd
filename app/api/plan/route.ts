@@ -133,7 +133,7 @@ export async function POST(req: Request) {
   try {
     const message = await client.messages.create({
       model: MODEL,
-      max_tokens: 8192,
+      max_tokens: 16000,
       system: "You are a precise logistics AI. Always respond with valid JSON only.",
       messages: [
         {
