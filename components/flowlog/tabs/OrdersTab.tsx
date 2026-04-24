@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import styles from "@/app/flowlog.module.css";
 import {
   fmtCurrency,
@@ -27,6 +27,7 @@ const PRIORITY_ORDER: Record<string, number> = {
   normal: 2,
   low: 3,
 };
+
 
 function AvailStrip() {
   const { state } = useFlowLog();
@@ -164,17 +165,48 @@ function OrderCard({ order }: { order: Order }) {
   const canReset = order.status === "failed";
 
   return (
-    <div className={styles["order-card"]}>
-      {/* Clickable header */}
-      <div
-        className={styles["order-card-header"]}
-        style={{ cursor: "pointer", userSelect: "none" }}
-        onClick={() => setExpanded((e) => !e)}
-      >
+    <div
+      className={styles["order-card"]}
+      style={{ cursor: "pointer", userSelect: "none" }}
+      onClick={() => setExpanded((e) => !e)}
+    >
+      {/* Header */}
+      <div className={styles["order-card-header"]}>
         <PriorityDot priority={order.priority} />
         <span className={styles["order-id"]}>{order.id}</span>
         <span className={styles["order-customer"]}>{order.customerName}</span>
         <StatusPill status={order.status} />
+
+        {/* Quick actions — one click, no expand needed */}
+        {order.status === "pending" && (
+          <button
+            type="button"
+            className={`${styles.btn} ${styles["btn-sm"]}`}
+            style={{ color: "var(--amber)", borderColor: "rgba(251,191,36,0.3)" }}
+            onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
+          >
+            Assign
+          </button>
+        )}
+        {canTransit && (
+          <button
+            type="button"
+            className={`${styles.btn} ${styles["btn-accent"]} ${styles["btn-sm"]}`}
+            onClick={(e) => { e.stopPropagation(); updateStatus("in_transit"); }}
+          >
+            Start Transit
+          </button>
+        )}
+        {canDeliver && (
+          <button
+            type="button"
+            className={`${styles.btn} ${styles["btn-accent"]} ${styles["btn-sm"]}`}
+            onClick={(e) => { e.stopPropagation(); updateStatus("delivered", { actualDeliveredAt: new Date().toISOString() }); }}
+          >
+            Confirm Delivery
+          </button>
+        )}
+
         <span
           className={styles["tbl-mono"]}
           style={{ marginLeft: "auto", marginRight: 8 }}
@@ -237,7 +269,7 @@ function OrderCard({ order }: { order: Order }) {
 
       {/* Expanded section */}
       {expanded && (
-        <div className={styles["order-expanded"]}>
+        <div className={styles["order-expanded"]} onClick={(e) => e.stopPropagation()}>
           {/* Items breakdown */}
           <div>
             <div
@@ -508,6 +540,14 @@ export function OrdersTab() {
   const { state, dispatch } = useFlowLog();
   const { data, ordFilter } = state;
 
+  const statusCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const o of data.orders) {
+      c[o.status] = (c[o.status] ?? 0) + 1;
+    }
+    return c;
+  }, [data.orders]);
+
   const filtered =
     ordFilter === "all"
       ? data.orders
@@ -526,7 +566,7 @@ export function OrdersTab() {
         <div>
           <h1>Deliveries</h1>
           <div className={styles["page-subtitle"]}>
-            Click any order card to expand details and take manual actions
+            Use the action buttons on each card — or expand for full details
           </div>
         </div>
         <div className={styles["header-actions"]}>
@@ -535,6 +575,7 @@ export function OrdersTab() {
               <FilterPill
                 key={f.id}
                 label={f.label}
+                count={f.id === "all" ? undefined : statusCounts[f.id]}
                 active={ordFilter === f.id}
                 onClick={() =>
                   dispatch({ type: "SET_ORD_FILTER", filter: f.id })
