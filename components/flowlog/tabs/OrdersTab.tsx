@@ -113,6 +113,13 @@ function OrderCard({ order }: { order: Order }) {
 
   function handleAssign() {
     if (!driverSel || !vehicleSel) return;
+    // Free previously assigned driver/vehicle if re-assigning
+    if (order.assignedDriverId && order.assignedDriverId !== driverSel) {
+      dispatch({ type: "UPDATE_DRIVER", id: order.assignedDriverId, patch: { status: "available" } });
+    }
+    if (order.assignedVehicleId && order.assignedVehicleId !== vehicleSel) {
+      dispatch({ type: "UPDATE_VEHICLE", id: order.assignedVehicleId, patch: { status: "available" } });
+    }
     dispatch({
       type: "UPDATE_ORDER",
       id: order.id,
@@ -122,6 +129,10 @@ function OrderCard({ order }: { order: Order }) {
         status: "assigned",
       },
     });
+    dispatch({ type: "UPDATE_DRIVER", id: driverSel, patch: { status: "on_duty" } });
+    dispatch({ type: "UPDATE_VEHICLE", id: vehicleSel, patch: { status: "on_route" } });
+    setDriverSel("");
+    setVehicleSel("");
   }
 
   const canAssign =
