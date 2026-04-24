@@ -248,6 +248,21 @@ export const TOOLS = [
     },
   },
   {
+    name: "draft_email",
+    description:
+      "Save a new outgoing email as a draft for user review and approval before sending. Use this for new compositions from the compose bar.",
+    input_schema: {
+      type: "object",
+      properties: {
+        to: { type: "string", description: "Recipient email address." },
+        subject: { type: "string" },
+        body: { type: "string", description: "Plain-text email body." },
+        related_order_id: { type: "string" },
+      },
+      required: ["to", "subject", "body"],
+    },
+  },
+  {
     name: "send_email",
     description:
       "Send an outgoing email (marked as 'sent'). If email_id is a draft, promotes the draft to sent. Otherwise creates a new sent email.",
