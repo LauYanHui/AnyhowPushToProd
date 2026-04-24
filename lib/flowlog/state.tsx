@@ -55,7 +55,7 @@ export type Action =
   | { type: "APPEND_CHAT"; message: ChatDisplayMessage }
   | { type: "REMOVE_CHAT_BY_ID"; id: string }
   | { type: "APPEND_ANTHROPIC"; message: AnthropicMessage }
-  | { type: "CLEAR_CHAT" }
+  | { type: "CLEAR_CHAT"; profileId?: AgentProfileId }
   | { type: "SET_RUNNING"; running: boolean }
   | { type: "SET_ACTIVE_PROFILE"; profile: AgentProfileId }
   | { type: "APPEND_EMAIL"; email: Email }
@@ -99,7 +99,13 @@ function reducer(state: FlowLogState, action: Action): FlowLogState {
         anthropicMessages: [...state.anthropicMessages, action.message],
       };
     case "CLEAR_CHAT":
-      return { ...state, chat: [], anthropicMessages: [] };
+      return {
+        ...state,
+        chat: action.profileId
+          ? state.chat.filter((m) => m.profileId !== action.profileId)
+          : [],
+        anthropicMessages: [],
+      };
     case "SET_RUNNING":
       return { ...state, agentRunning: action.running };
     case "SET_ACTIVE_PROFILE":

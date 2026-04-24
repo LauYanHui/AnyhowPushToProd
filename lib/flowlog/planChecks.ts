@@ -65,6 +65,11 @@ export function checkExpiry(
     .sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
+function parseTimeMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
 export function checkDeliveryRisk(
   orders: PlanOrder[],
   drivers: PlanDriver[],
@@ -84,7 +89,7 @@ export function checkDeliveryRisk(
       });
     } else if (
       order.deliveryTime &&
-      suitableDriver.startTime > order.deliveryTime
+      parseTimeMinutes(suitableDriver.startTime) > parseTimeMinutes(order.deliveryTime)
     ) {
       risks.push({
         orderId: order.orderId,

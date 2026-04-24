@@ -97,6 +97,7 @@ Never invent order IDs, driver names, or ETAs — always pull them from tools fi
       "get_orders",
       "get_fleet_status",
       "draft_email",
+      "draft_email_reply",
       "send_email",
     ],
     suggestedPrompts: [
