@@ -13,15 +13,14 @@ import {
 } from "@/lib/flowlog/helpers";
 import { toPlanInput } from "@/lib/flowlog/planAdapter";
 import { useFlowLog } from "@/lib/flowlog/state";
-import type { TabId } from "@/lib/flowlog/types";
+import type { AgentProfileId, TabId } from "@/lib/flowlog/types";
 import { DailyPlanPanel } from "../plan/DailyPlanPanel";
 import { PriorityDot, StatusPill } from "../ui";
 
-type AgentRunShortcut = "dispatch-all" | "triage-inbox" | "ask-general";
-
 type AlertAction =
   | { kind: "tab"; label: string; tab: TabId }
-  | { kind: "run"; label: string; run: AgentRunShortcut };
+  | { kind: "chat"; label: string; prefill: string; profile: AgentProfileId }
+  | { kind: "run"; label: string; prompt: string; profile: AgentProfileId };
 
 interface Alert {
   level: "crit" | "warn";
@@ -44,7 +43,13 @@ function useAlerts(): Alert[] {
       text: `${unreadIncoming.length} unread email${unreadIncoming.length > 1 ? "s" : ""} in ops inbox`,
       actions: [
         { kind: "tab", label: "Open Inbox", tab: "emails" },
-        { kind: "run", label: "Triage All", run: "triage-inbox" },
+        {
+          kind: "run",
+          label: "Triage All",
+          prompt:
+            "List all unread incoming emails and triage each one — draft replies where appropriate, mark informational mail as handled.",
+          profile: "inbox",
+        },
       ],
     });
   }
@@ -65,13 +70,27 @@ function useAlerts(): Alert[] {
         alerts.push({
           level: "crit",
           text: `${i.name} — ${e.qty} ${i.unit}s expire ${fmtDate(e.expiresOn)}`,
-          actions: [{ kind: "run", label: "Ask Agent", run: "ask-general" }],
+          actions: [
+            {
+              kind: "chat",
+              label: "Ask Agent",
+              profile: "general",
+              prefill: `${i.name} has ${e.qty} ${i.unit}(s) expiring on ${fmtDate(e.expiresOn)} — that's critical. What should I do to minimise waste?`,
+            },
+          ],
         });
       } else if (withinNextDays(e.expiresOn, today, 7)) {
         alerts.push({
           level: "warn",
           text: `${i.name} — ${e.qty} ${i.unit}s expire ${fmtDate(e.expiresOn)}`,
-          actions: [{ kind: "run", label: "Ask Agent", run: "ask-general" }],
+          actions: [
+            {
+              kind: "chat",
+              label: "Ask Agent",
+              profile: "general",
+              prefill: `${i.name} has ${e.qty} ${i.unit}(s) expiring on ${fmtDate(e.expiresOn)}. What options do I have to use them before they expire?`,
+            },
+          ],
         });
       }
     }),
@@ -83,7 +102,14 @@ function useAlerts(): Alert[] {
       alerts.push({
         level: "warn",
         text: `${i.name} below reorder point (${i.currentStock}/${i.reorderPoint} ${i.unit})`,
-        actions: [{ kind: "run", label: "Reorder", run: "ask-general" }],
+        actions: [
+          {
+            kind: "chat",
+            label: "Reorder",
+            profile: "outbox",
+            prefill: `${i.name} is at ${i.currentStock} ${i.unit}(s), below the reorder point of ${i.reorderPoint}. Please draft a reorder email to our supplier.`,
+          },
+        ],
       }),
     );
 
@@ -94,7 +120,12 @@ function useAlerts(): Alert[] {
         level: "crit",
         text: `Unassigned ${o.id} delivery window starts in <2h — ${o.customerName}`,
         actions: [
-          { kind: "run", label: "Run Dispatch", run: "dispatch-all" },
+          {
+            kind: "run",
+            label: "Run Dispatch",
+            prompt: `Assign order ${o.id} for ${o.customerName} urgently — the delivery window starts in under 2 hours. Use the best available driver and check vehicle capacity carefully.`,
+            profile: "dispatch",
+          },
           { kind: "tab", label: "View Orders", tab: "orders" },
         ],
       });
@@ -106,7 +137,12 @@ function useAlerts(): Alert[] {
       level: "warn",
       text: `${pendingOrders.length} pending orders awaiting driver assignment`,
       actions: [
-        { kind: "run", label: "Run Dispatch", run: "dispatch-all" },
+        {
+          kind: "run",
+          label: "Run Dispatch",
+          prompt: `Assign all ${pendingOrders.length} pending orders using the best available driver and vehicle. Prioritise urgent orders and check capacity carefully.`,
+          profile: "dispatch",
+        },
       ],
     });
   }
@@ -192,27 +228,11 @@ function AlertsCard() {
   const alerts = useAlerts();
   const api = { getState: () => stateRef.current, dispatch };
 
-  async function runAction(run: AgentRunShortcut) {
+  async function runAction(prompt: string, profile: AgentProfileId) {
     if (state.agentRunning) return;
+    dispatch({ type: "SET_ACTIVE_PROFILE", profile });
     dispatch({ type: "SET_CHAT_OPEN", open: true });
-    if (run === "dispatch-all") {
-      await runAgentLoop(
-        "Assign all pending orders using the best available driver and vehicle. Prioritise urgent orders and check capacity carefully.",
-        api,
-        "dispatch",
-        { mode: "ephemeral" },
-      );
-    } else if (run === "triage-inbox") {
-      await runAgentLoop(
-        "List all unread incoming emails and triage each one — draft replies where appropriate, mark informational mail as handled.",
-        api,
-        "inbox",
-        { mode: "ephemeral" },
-      );
-    } else if (run === "ask-general") {
-      // Just open the floating chat on the general profile — user types their question.
-      dispatch({ type: "SET_ACTIVE_PROFILE", profile: "general" });
-    }
+    await runAgentLoop(prompt, api, profile, { mode: "ephemeral" });
   }
 
   if (!alerts.length) {
@@ -239,9 +259,20 @@ function AlertsCard() {
                   key={ai}
                   type="button"
                   className={styles["alert-action"]}
-                  onClick={() =>
-                    dispatch({ type: "SET_ACTIVE_TAB", tab: ac.tab })
-                  }
+                  onClick={() => dispatch({ type: "SET_ACTIVE_TAB", tab: ac.tab })}
+                >
+                  {ac.label}
+                </button>
+              ) : ac.kind === "chat" ? (
+                <button
+                  key={ai}
+                  type="button"
+                  className={styles["alert-action"]}
+                  onClick={() => {
+                    dispatch({ type: "SET_ACTIVE_PROFILE", profile: ac.profile });
+                    dispatch({ type: "SET_AGENT_PREFILL", text: ac.prefill });
+                    dispatch({ type: "SET_CHAT_OPEN", open: true });
+                  }}
                 >
                   {ac.label}
                 </button>
@@ -251,7 +282,7 @@ function AlertsCard() {
                   type="button"
                   className={styles["alert-action"]}
                   disabled={state.agentRunning}
-                  onClick={() => void runAction(ac.run)}
+                  onClick={() => void runAction(ac.prompt, ac.profile)}
                 >
                   {ac.label}
                 </button>
@@ -389,7 +420,6 @@ export function DashboardTab() {
     if (!plan || state.agentRunning || applyLoading) return;
     setApplyLoading(true);
 
-    // Build a concise dispatch prompt from the delivery plan
     const assignments = plan.deliveryPlan
       .map(
         (d) =>
@@ -404,9 +434,9 @@ export function DashboardTab() {
       `For each order, use the assign_delivery tool. Skip orders that are already assigned, in transit, or delivered.`;
 
     const api = { getState: () => stateRef.current, dispatch };
-    dispatch({ type: "SET_CHAT_OPEN", open: true });
+    dispatch({ type: "SET_ACTIVE_TAB", tab: "agent" });
     try {
-      await runAgentLoop(prompt, api, "dispatch", { mode: "ephemeral" });
+      await runAgentLoop(prompt, api, "dispatch");
     } finally {
       setApplyLoading(false);
     }

@@ -37,6 +37,7 @@ export interface FlowLogState {
   anthropicMessages: AnthropicMessage[];
   agentRunning: boolean;
   activeAgentProfile: AgentProfileId;
+  agentPrefill: string | null;
   selectedEmailId: string | null;
   selectedReportId: string | null;
   plan: PlanResult | null;
@@ -66,6 +67,7 @@ export type Action =
   | { type: "SET_PLAN"; plan: PlanResult | null }
   | { type: "SET_PLAN_LOADING"; loading: boolean }
   | { type: "SET_PLAN_ERROR"; error: string | null }
+  | { type: "SET_AGENT_PREFILL"; text: string | null }
   | { type: "SET_CHAT_OPEN"; open: boolean }
   | { type: "UPDATE_ORDER"; id: string; patch: Partial<Order> }
   | { type: "UPDATE_DRIVER"; id: string; patch: Partial<Driver> }
@@ -145,6 +147,8 @@ function reducer(state: FlowLogState, action: Action): FlowLogState {
       return { ...state, planLoading: action.loading };
     case "SET_PLAN_ERROR":
       return { ...state, planError: action.error };
+    case "SET_AGENT_PREFILL":
+      return { ...state, agentPrefill: action.text };
     case "SET_CHAT_OPEN":
       return { ...state, chatOpen: action.open };
     case "UPDATE_ORDER":
@@ -199,6 +203,7 @@ function initialState(): FlowLogState {
     anthropicMessages: [],
     agentRunning: false,
     activeAgentProfile: "general",
+    agentPrefill: null,
     selectedEmailId: null,
     selectedReportId: null,
     plan: null,
