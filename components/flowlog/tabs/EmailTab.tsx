@@ -205,21 +205,16 @@ function RelatedOrderCard({ orderId }: { orderId: string }) {
   );
 }
 
-function EmailBody({ email }: { email: Email }) {
+function EmailBody({
+  email,
+  onStartDraft,
+}: {
+  email: Email;
+  onStartDraft?: (email: Email) => void;
+}) {
   const { state, dispatch, stateRef } = useFlowLog();
   const api = { getState: () => stateRef.current, dispatch };
   const [busy, setBusy] = useState(false);
-
-  async function triageWithInboxAgent() {
-    if (state.agentRunning) return;
-    setBusy(true);
-    await runAgentLoop(
-      `Triage incoming email ${email.id}. Read it, pull related order/supplier context, and either draft a reply with draft_email_reply or mark_email_handled if no reply is needed.`,
-      api,
-      "inbox",
-    );
-    setBusy(false);
-  }
 
   async function approveAndSend() {
     if (state.agentRunning) return;
@@ -287,16 +282,14 @@ function EmailBody({ email }: { email: Email }) {
           <button
             type="button"
             className={`${styles.btn} ${styles["btn-accent"]} ${styles["btn-sm"]}`}
-            onClick={() => void triageWithInboxAgent()}
-            disabled={busy || state.agentRunning}
+            onClick={() => onStartDraft?.(email)}
+            disabled={state.agentRunning}
           >
-            Run Inbox Agent on this email
+            Draft a Reply
           </button>
-          {email.status === "unread" && (
-            <span className={styles["text-hint"]}>
-              The agent will read, pull context, and draft a reply.
-            </span>
-          )}
+          <span className={styles["text-hint"]}>
+            Opens the Outbox Agent with this email pre-loaded as context.
+          </span>
         </div>
       )}
 
@@ -379,12 +372,26 @@ function OutboxMessage({ msg }: { msg: import("@/lib/flowlog/types").ChatDisplay
   return null;
 }
 
-function OutboxChatPanel() {
+function OutboxChatPanel({
+  prefill,
+  onPrefillConsumed,
+}: {
+  prefill?: string | null;
+  onPrefillConsumed?: () => void;
+}) {
   const { state, dispatch, stateRef } = useFlowLog();
   const messagesRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const api = { getState: () => stateRef.current, dispatch };
+
+  useEffect(() => {
+    if (prefill) {
+      setInput(prefill);
+      setValidationError(null);
+      onPrefillConsumed?.();
+    }
+  }, [prefill]);
 
   const outboxMessages = state.chat.filter((m) => m.profileId === "outbox");
 
@@ -515,11 +522,30 @@ function OutboxChatPanel() {
   );
 }
 
+function buildDraftPrefill(email: Email): string {
+  const intro = `Draft a reply to this email:\nFrom: ${email.from}\nSubject: ${email.subject}\n\n`;
+  const suffix = email.relatedOrderId ? `\n\nRelated order: ${email.relatedOrderId}` : "";
+  const maxBody = 460 - intro.length - suffix.length;
+  const bodyExcerpt =
+    maxBody > 20
+      ? email.body.length > maxBody
+        ? email.body.slice(0, maxBody) + "…"
+        : email.body
+      : "";
+  return (intro + bodyExcerpt + suffix).slice(0, 490);
+}
+
 export function EmailTab() {
   const { state, dispatch, stateRef } = useFlowLog();
   const { emails } = state.data;
   const [view, setView] = useState<View>("inbox");
+  const [outboxPrefill, setOutboxPrefill] = useState<string | null>(null);
   const api = { getState: () => stateRef.current, dispatch };
+
+  function handleStartDraft(email: Email) {
+    setOutboxPrefill(buildDraftPrefill(email));
+    setView("drafts");
+  }
 
   async function handleApprove(id: string) {
     if (state.agentRunning) return;
@@ -606,11 +632,14 @@ export function EmailTab() {
           />
         </div>
         {view === "drafts" ? (
-          <OutboxChatPanel />
+          <OutboxChatPanel
+            prefill={outboxPrefill}
+            onPrefillConsumed={() => setOutboxPrefill(null)}
+          />
         ) : (
           <div className={styles["email-right"]}>
             {selectedEmail ? (
-              <EmailBody email={selectedEmail} />
+              <EmailBody email={selectedEmail} onStartDraft={handleStartDraft} />
             ) : (
               <div className={styles["empty-state"]}>
                 Select an email to view details.
