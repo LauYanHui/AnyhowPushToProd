@@ -1038,3 +1038,511 @@
 .expiry-soft {
   font-size: 12px;
 }
+
+/* ── ALERT ACTIONS (multiple buttons) ── */
+.alert-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.alert-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── PROFILE SELECTOR (Agent tab) ── */
+.profile-selector {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 14px 40px 0;
+  flex-shrink: 0;
+}
+.profile-pill {
+  padding: 6px 14px;
+  border: 0.5px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 20px;
+  font-family: var(--font-syne), sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.profile-pill:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.profile-pill.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: rgba(245, 166, 35, 0.35);
+}
+.profile-pill:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── EMAIL TAB ── */
+.email-filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.filter-pill-count {
+  margin-left: 6px;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 10px;
+  color: currentColor;
+  opacity: 0.7;
+}
+.email-compose-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+.email-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 12px;
+  min-height: 520px;
+}
+.email-left {
+  background: var(--surface);
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+}
+.email-list {
+  overflow-y: auto;
+}
+.email-list-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--hint);
+  font-size: 12px;
+}
+.email-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: none;
+  border-bottom: 0.5px solid var(--border);
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-syne), sans-serif;
+  color: var(--text);
+  transition: background 0.12s;
+}
+.email-row:hover {
+  background: var(--surface2);
+}
+.email-row.active {
+  background: var(--accent-glow);
+}
+.email-row.unread .email-row-from,
+.email-row.unread .email-row-subject {
+  font-weight: 600;
+  color: var(--text);
+}
+.email-row-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.email-unread-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.email-row-from {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.email-row-time {
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 10px;
+  color: var(--hint);
+}
+.email-row-subject {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.email-row-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.email-cat-chip {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--surface3);
+  color: var(--muted);
+  border: 0.5px solid var(--border2);
+  text-transform: capitalize;
+}
+.cat-customer_complaint {
+  color: var(--red);
+  border-color: var(--red-border);
+  background: var(--red-bg);
+}
+.cat-customer_inquiry {
+  color: var(--blue);
+  border-color: var(--blue-border);
+  background: var(--blue-bg);
+}
+.cat-customer_order {
+  color: var(--accent);
+  border-color: rgba(245, 166, 35, 0.22);
+  background: var(--accent-glow);
+}
+.cat-supplier_update {
+  color: var(--green);
+  border-color: var(--green-border);
+  background: var(--green-bg);
+}
+.cat-delivery_notification {
+  color: var(--blue);
+  border-color: var(--blue-border);
+  background: var(--blue-bg);
+}
+.email-draft-chip {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  color: var(--accent);
+  border: 0.5px solid rgba(245, 166, 35, 0.35);
+  background: var(--accent-glow);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.email-row-order {
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 10px;
+  color: var(--hint);
+  margin-left: auto;
+}
+.email-right {
+  background: var(--surface);
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+.email-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.email-body-head {
+  border-bottom: 0.5px solid var(--border);
+  padding-bottom: 10px;
+}
+.email-body-subject {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+.email-body-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.email-agent-banner {
+  background: var(--blue-bg);
+  border: 0.5px solid var(--blue-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--text);
+}
+.email-agent-banner strong {
+  color: var(--blue);
+}
+.email-agent-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.email-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.email-body-text {
+  background: var(--surface2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-family: var(--font-syne), sans-serif;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+.email-context {
+  background: var(--surface2);
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.email-context-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--hint);
+  margin-bottom: 8px;
+}
+.email-context-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.email-context-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.email-agent-notes {
+  background: var(--surface3);
+  border: 0.5px dashed var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+/* ── REPORTS TAB ── */
+.reports-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 14px;
+}
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.report-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-syne), sans-serif;
+  color: var(--text);
+}
+.report-card:hover {
+  border-color: var(--accent);
+}
+.report-card.active {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+.report-card-date {
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.report-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.report-card-summary {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.report-card-metrics {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: var(--hint);
+}
+.report-card-metrics strong {
+  color: var(--accent);
+  font-family: var(--font-dm-mono), monospace;
+  font-weight: 500;
+}
+.reports-main {
+  min-width: 0;
+}
+.report-frame {
+  background: var(--surface);
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.report-frame-head {
+  padding: 18px 22px;
+  border-bottom: 0.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: linear-gradient(
+    135deg,
+    var(--accent-glow) 0%,
+    rgba(245, 166, 35, 0) 100%
+  );
+}
+.report-frame-brand {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.report-frame-brand-mark {
+  font-size: 18px;
+}
+.report-frame-date {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-dm-mono), monospace;
+}
+.report-frame-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  padding: 18px 22px;
+  border-bottom: 0.5px solid var(--border);
+}
+.report-kpi {
+  background: var(--surface2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.report-kpi-val {
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.report-kpi-lbl {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.report-frame-body {
+  padding: 22px 26px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.report-frame-body h1,
+.report-frame-body h2,
+.report-frame-body h3 {
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin: 20px 0 10px;
+}
+.report-frame-body h2 {
+  font-size: 17px;
+  border-bottom: 0.5px solid var(--border);
+  padding-bottom: 6px;
+}
+.report-frame-body h3 {
+  font-size: 14px;
+  color: var(--accent);
+}
+.report-frame-body ul,
+.report-frame-body ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+.report-frame-body li {
+  margin: 3px 0;
+}
+.report-frame-body strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.report-frame-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 12px;
+}
+.report-frame-body th,
+.report-frame-body td {
+  padding: 8px 12px;
+  border-bottom: 0.5px solid var(--border);
+  text-align: left;
+}
+.report-frame-body th {
+  color: var(--hint);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.report-frame-body p {
+  margin: 8px 0;
+}
+
+@media (max-width: 1100px) {
+  .email-layout {
+    grid-template-columns: 1fr;
+  }
+  .reports-layout {
+    grid-template-columns: 1fr;
+  }
+  .report-frame-kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .email-context-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

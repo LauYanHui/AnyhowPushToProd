@@ -1,12 +1,12 @@
-import { buildSystemPrompt } from "./systemPrompt";
+import { getProfile, getToolsFor } from "./agents/profiles";
 import { executeTool } from "./toolHandlers";
-import { TOOLS } from "./tools";
+import type { Action, FlowLogState } from "./state";
 import type {
+  AgentProfileId,
   AnthropicMessage,
   ChatDisplayMessage,
   ContentBlock,
 } from "./types";
-import type { Action, FlowLogState } from "./state";
 
 interface AgentApi {
   getState: () => FlowLogState;
@@ -31,19 +31,33 @@ function appendAnthropic(api: AgentApi, message: AnthropicMessage) {
   api.dispatch({ type: "APPEND_ANTHROPIC", message });
 }
 
+function buildSystemPromptForProfile(profileId: AgentProfileId): string {
+  const todayStr = new Date().toLocaleDateString("en-SG", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  return getProfile(profileId).buildSystemPrompt({ todayStr });
+}
+
 export async function runAgentLoop(
   userText: string,
   api: AgentApi,
+  profileId: AgentProfileId = "general",
 ): Promise<void> {
   api.dispatch({ type: "SET_RUNNING", running: true });
-  appendChat(api, { kind: "user", id: nextId("u"), text: userText });
+  appendChat(api, { kind: "user", id: nextId("u"), text: userText, profileId });
   appendAnthropic(api, { role: "user", content: userText });
+
+  const tools = getToolsFor(profileId);
+  const system = buildSystemPromptForProfile(profileId);
 
   let turns = 0;
   try {
-    while (turns++ < 10) {
+    while (turns++ < 12) {
       const thinkingId = nextId("thinking");
-      appendChat(api, { kind: "thinking", id: thinkingId });
+      appendChat(api, { kind: "thinking", id: thinkingId, profileId });
 
       const messages = api.getState().anthropicMessages;
       const response = await fetch("/api/agent", {
@@ -51,8 +65,8 @@ export async function runAgentLoop(
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           max_tokens: 4096,
-          system: buildSystemPrompt(),
-          tools: TOOLS,
+          system,
+          tools,
           messages,
         }),
       });
@@ -69,6 +83,7 @@ export async function runAgentLoop(
           kind: "error",
           id: nextId("err"),
           text: typeof msg === "string" ? msg : JSON.stringify(msg),
+          profileId,
         });
         break;
       }
@@ -80,7 +95,7 @@ export async function runAgentLoop(
       );
       const text = textBlocks.map((b) => b.text).join("\n").trim();
       if (text) {
-        appendChat(api, { kind: "ai", id: nextId("ai"), text });
+        appendChat(api, { kind: "ai", id: nextId("ai"), text, profileId });
       }
 
       if (data.stop_reason === "end_turn") break;
@@ -98,6 +113,7 @@ export async function runAgentLoop(
             id: nextId("tc"),
             toolName: block.name,
             input: block.input,
+            profileId,
           });
           const { result, nextData } = executeTool(
             block.name,
@@ -112,6 +128,7 @@ export async function runAgentLoop(
             id: nextId("tr"),
             toolName: block.name,
             result,
+            profileId,
           });
           toolResults.push({
             type: "tool_result",
@@ -131,6 +148,7 @@ export async function runAgentLoop(
       kind: "error",
       id: nextId("err"),
       text: e instanceof Error ? e.message : String(e),
+      profileId,
     });
   } finally {
     api.dispatch({ type: "SET_RUNNING", running: false });

@@ -129,6 +129,63 @@ export interface Reorder {
   notes: string;
 }
 
+export type EmailDirection = "incoming" | "outgoing";
+
+export type EmailStatus = "unread" | "read" | "handled" | "draft" | "sent";
+
+export type EmailCategory =
+  | "customer_order"
+  | "customer_complaint"
+  | "customer_inquiry"
+  | "supplier_update"
+  | "delivery_notification"
+  | "internal"
+  | "other";
+
+export interface Email {
+  id: string;
+  direction: EmailDirection;
+  from: string;
+  to: string;
+  subject: string;
+  body: string;
+  receivedAt: string;
+  status: EmailStatus;
+  category: EmailCategory;
+  relatedOrderId: string | null;
+  relatedSupplierId: string | null;
+  draftedBy: "agent" | "user" | null;
+  agentNotes: string;
+  replyToEmailId: string | null;
+}
+
+export interface DailyReportMetrics {
+  ordersDelivered: number;
+  ordersPending: number;
+  ordersFailed: number;
+  inventoryValue: number;
+  lowStockCount: number;
+  expiryRiskValue: number;
+  fleetUtilizationPct: number;
+}
+
+export interface DailyReport {
+  id: string;
+  generatedAt: string;
+  dateCovered: string;
+  title: string;
+  summary: string;
+  html: string;
+  metrics: DailyReportMetrics;
+}
+
+export type AgentProfileId =
+  | "general"
+  | "inbox"
+  | "outbox"
+  | "dispatch"
+  | "reports";
+
 export interface FlowLogData {
   inventory: Inventory[];
   orders: Order[];
@@ -136,9 +193,17 @@ export interface FlowLogData {
   drivers: Driver[];
   suppliers: Supplier[];
   reorders: Reorder[];
+  emails: Email[];
+  reports: DailyReport[];
 }
 
-export type TabId = "dashboard" | "inventory" | "orders" | "agent";
+export type TabId =
+  | "dashboard"
+  | "inventory"
+  | "orders"
+  | "agent"
+  | "emails"
+  | "reports";
 
 export type InvFilter = "all" | "low_stock" | "near_expiry" | "out_of_stock";
 
@@ -162,19 +227,21 @@ export interface AnthropicMessage {
 
 // Chat display messages — separate from API messages so we can model thinking/error states
 export type ChatDisplayMessage =
-  | { kind: "user"; id: string; text: string }
-  | { kind: "ai"; id: string; text: string }
+  | { kind: "user"; id: string; text: string; profileId?: AgentProfileId }
+  | { kind: "ai"; id: string; text: string; profileId?: AgentProfileId }
   | {
       kind: "tool_call";
       id: string;
       toolName: string;
       input: Record<string, unknown>;
+      profileId?: AgentProfileId;
     }
   | {
       kind: "tool_result";
       id: string;
       toolName: string;
       result: unknown;
+      profileId?: AgentProfileId;
     }
-  | { kind: "thinking"; id: string }
-  | { kind: "error"; id: string; text: string };
+  | { kind: "thinking"; id: string; profileId?: AgentProfileId }
+  | { kind: "error"; id: string; text: string; profileId?: AgentProfileId };

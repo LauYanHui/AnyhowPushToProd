@@ -1,6 +1,7 @@
 "use client";
 
 import styles from "@/app/flowlog.module.css";
+import { runAgentLoop } from "@/lib/flowlog/agent";
 import {
   fmtCurrency,
   fmtDate,
@@ -13,11 +14,16 @@ import { useFlowLog } from "@/lib/flowlog/state";
 import type { TabId } from "@/lib/flowlog/types";
 import { PriorityDot, StatusPill } from "../ui";
 
+type AgentRunShortcut = "dispatch-all" | "triage-inbox";
+
+type AlertAction =
+  | { kind: "tab"; label: string; tab: TabId }
+  | { kind: "run"; label: string; run: AgentRunShortcut };
+
 interface Alert {
   level: "crit" | "warn";
   text: string;
-  action: string | null;
-  tab: TabId | null;
+  actions: AlertAction[];
 }
 
 function useAlerts(): Alert[] {
@@ -26,14 +32,27 @@ function useAlerts(): Alert[] {
   const today = new Date();
   const alerts: Alert[] = [];
 
+  const unreadIncoming = data.emails.filter(
+    (e) => e.direction === "incoming" && e.status === "unread",
+  );
+  if (unreadIncoming.length > 0) {
+    alerts.push({
+      level: "warn",
+      text: `${unreadIncoming.length} unread email${unreadIncoming.length > 1 ? "s" : ""} in ops inbox`,
+      actions: [
+        { kind: "tab", label: "Open Inbox", tab: "emails" },
+        { kind: "run", label: "Triage All", run: "triage-inbox" },
+      ],
+    });
+  }
+
   data.inventory
     .filter((i) => i.currentStock === 0)
     .forEach((i) =>
       alerts.push({
         level: "crit",
         text: `${i.name} is OUT OF STOCK`,
-        action: "View Inventory",
-        tab: "inventory",
+        actions: [{ kind: "tab", label: "View Inventory", tab: "inventory" }],
       }),
     );
 
@@ -43,15 +62,13 @@ function useAlerts(): Alert[] {
         alerts.push({
           level: "crit",
           text: `${i.name} — ${e.qty} ${i.unit}s expire ${fmtDate(e.expiresOn)}`,
-          action: "Ask Agent",
-          tab: "agent",
+          actions: [{ kind: "tab", label: "Ask Agent", tab: "agent" }],
         });
       } else if (withinNextDays(e.expiresOn, today, 7)) {
         alerts.push({
           level: "warn",
           text: `${i.name} — ${e.qty} ${i.unit}s expire ${fmtDate(e.expiresOn)}`,
-          action: "Ask Agent",
-          tab: "agent",
+          actions: [{ kind: "tab", label: "Ask Agent", tab: "agent" }],
         });
       }
     }),
@@ -63,23 +80,33 @@ function useAlerts(): Alert[] {
       alerts.push({
         level: "warn",
         text: `${i.name} below reorder point (${i.currentStock}/${i.reorderPoint} ${i.unit})`,
-        action: "Reorder",
-        tab: "agent",
+        actions: [{ kind: "tab", label: "Reorder", tab: "agent" }],
       }),
     );
 
-  data.orders
-    .filter((o) => o.status === "pending")
-    .forEach((o) => {
-      if (orderIsUpcomingWithinMinutes(o, today, 120, -30)) {
-        alerts.push({
-          level: "crit",
-          text: `Unassigned ${o.id} delivery window starts in <2h — ${o.customerName}`,
-          action: "Assign Now",
-          tab: "agent",
-        });
-      }
+  const pendingOrders = data.orders.filter((o) => o.status === "pending");
+  pendingOrders.forEach((o) => {
+    if (orderIsUpcomingWithinMinutes(o, today, 120, -30)) {
+      alerts.push({
+        level: "crit",
+        text: `Unassigned ${o.id} delivery window starts in <2h — ${o.customerName}`,
+        actions: [
+          { kind: "run", label: "Run Dispatch", run: "dispatch-all" },
+          { kind: "tab", label: "View Orders", tab: "orders" },
+        ],
+      });
+    }
+  });
+
+  if (pendingOrders.length >= 3) {
+    alerts.push({
+      level: "warn",
+      text: `${pendingOrders.length} pending orders awaiting driver assignment`,
+      actions: [
+        { kind: "run", label: "Run Dispatch", run: "dispatch-all" },
+      ],
     });
+  }
 
   data.vehicles
     .filter((v) => withinNextDays(v.nextServiceDue, today, 7))
@@ -87,8 +114,7 @@ function useAlerts(): Alert[] {
       alerts.push({
         level: "warn",
         text: `${v.plateNumber} service due ${fmtDate(v.nextServiceDue)}`,
-        action: null,
-        tab: null,
+        actions: [],
       }),
     );
 
@@ -159,8 +185,28 @@ function Kpis() {
 }
 
 function AlertsCard() {
-  const { dispatch } = useFlowLog();
+  const { state, dispatch, stateRef } = useFlowLog();
   const alerts = useAlerts();
+  const api = { getState: () => stateRef.current, dispatch };
+
+  async function runAction(run: AgentRunShortcut) {
+    if (state.agentRunning) return;
+    dispatch({ type: "SET_ACTIVE_TAB", tab: "agent" });
+    if (run === "dispatch-all") {
+      await runAgentLoop(
+        "Assign all pending orders using the best available driver and vehicle. Prioritise urgent orders and check capacity carefully.",
+        api,
+        "dispatch",
+      );
+    } else if (run === "triage-inbox") {
+      await runAgentLoop(
+        "List all unread incoming emails and triage each one — draft replies where appropriate, mark informational mail as handled.",
+        api,
+        "inbox",
+      );
+    }
+  }
+
   if (!alerts.length) {
     return (
       <div className={styles.card}>
@@ -172,23 +218,38 @@ function AlertsCard() {
   }
   return (
     <div className={styles.card}>
-      {alerts.slice(0, 8).map((a, i) => (
+      {alerts.slice(0, 10).map((a, i) => (
         <div key={i} className={styles["alert-row"]}>
           <div className={`${styles["alert-icon"]} ${styles[a.level]}`}>
             {a.level === "crit" ? "!" : "▲"}
           </div>
           <div className={styles["alert-text"]}>{a.text}</div>
-          {a.action && a.tab && (
-            <button
-              type="button"
-              className={styles["alert-action"]}
-              onClick={() =>
-                dispatch({ type: "SET_ACTIVE_TAB", tab: a.tab as TabId })
-              }
-            >
-              {a.action}
-            </button>
-          )}
+          <div className={styles["alert-actions"]}>
+            {a.actions.map((ac, ai) =>
+              ac.kind === "tab" ? (
+                <button
+                  key={ai}
+                  type="button"
+                  className={styles["alert-action"]}
+                  onClick={() =>
+                    dispatch({ type: "SET_ACTIVE_TAB", tab: ac.tab })
+                  }
+                >
+                  {ac.label}
+                </button>
+              ) : (
+                <button
+                  key={ai}
+                  type="button"
+                  className={styles["alert-action"]}
+                  disabled={state.agentRunning}
+                  onClick={() => void runAction(ac.run)}
+                >
+                  {ac.label}
+                </button>
+              ),
+            )}
+          </div>
         </div>
       ))}
     </div>

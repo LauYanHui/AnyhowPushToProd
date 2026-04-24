@@ -177,4 +177,148 @@ export const TOOLS = [
       required: ["order_id", "driver_id", "vehicle_id"],
     },
   },
+  {
+    name: "list_emails",
+    description:
+      "List emails in the PrimeChill operations mailbox, filtered by direction and/or status.",
+    input_schema: {
+      type: "object",
+      properties: {
+        direction: {
+          type: "string",
+          enum: ["incoming", "outgoing", "all"],
+          description: "Inbox vs outbox vs both. Defaults to 'all'.",
+        },
+        status: {
+          type: "string",
+          enum: ["unread", "read", "handled", "draft", "sent", "all"],
+          description: "Filter by status. Defaults to 'all'.",
+        },
+        category: {
+          type: "string",
+          enum: [
+            "customer_order",
+            "customer_complaint",
+            "customer_inquiry",
+            "supplier_update",
+            "delivery_notification",
+            "internal",
+            "other",
+          ],
+        },
+        limit: {
+          type: "number",
+          description: "Max number of rows to return. Defaults to 20.",
+        },
+      },
+    },
+  },
+  {
+    name: "read_email",
+    description:
+      "Read the full body of an email and any related order/supplier context. Marks unread emails as read.",
+    input_schema: {
+      type: "object",
+      properties: {
+        email_id: { type: "string" },
+      },
+      required: ["email_id"],
+    },
+  },
+  {
+    name: "draft_email_reply",
+    description:
+      "Draft a reply to an incoming email. Saves it to the outbox as a DRAFT for the human to review — does not actually send.",
+    input_schema: {
+      type: "object",
+      properties: {
+        reply_to_email_id: {
+          type: "string",
+          description: "The incoming email being replied to.",
+        },
+        subject: { type: "string" },
+        body: {
+          type: "string",
+          description:
+            "Plain-text reply body. Keep it concise, professional, factual.",
+        },
+        related_order_id: { type: "string" },
+      },
+      required: ["reply_to_email_id", "subject", "body"],
+    },
+  },
+  {
+    name: "send_email",
+    description:
+      "Send an outgoing email (marked as 'sent'). If email_id is a draft, promotes the draft to sent. Otherwise creates a new sent email.",
+    input_schema: {
+      type: "object",
+      properties: {
+        email_id: {
+          type: "string",
+          description:
+            "Optional — if provided and points to a draft, promotes that draft to sent.",
+        },
+        to: { type: "string" },
+        subject: { type: "string" },
+        body: { type: "string" },
+        related_order_id: { type: "string" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "mark_email_handled",
+    description:
+      "Mark an email as handled without drafting a reply — for informational emails that need no response.",
+    input_schema: {
+      type: "object",
+      properties: {
+        email_id: { type: "string" },
+        notes: { type: "string" },
+      },
+      required: ["email_id", "notes"],
+    },
+  },
+  {
+    name: "generate_daily_report",
+    description:
+      "Persist a daily operations report (the Genspark Daily Briefing) with exec summary, full HTML body, and numeric metrics.",
+    input_schema: {
+      type: "object",
+      properties: {
+        summary: {
+          type: "string",
+          description: "Short exec summary paragraph, 2–3 sentences.",
+        },
+        html: {
+          type: "string",
+          description:
+            "HTML body of the report (no <html>/<head> wrapper). Use semantic tags and inline styles sparingly.",
+        },
+        metrics: {
+          type: "object",
+          properties: {
+            ordersDelivered: { type: "number" },
+            ordersPending: { type: "number" },
+            ordersFailed: { type: "number" },
+            inventoryValue: { type: "number" },
+            lowStockCount: { type: "number" },
+            expiryRiskValue: { type: "number" },
+            fleetUtilizationPct: { type: "number" },
+          },
+          required: [
+            "ordersDelivered",
+            "ordersPending",
+            "ordersFailed",
+            "inventoryValue",
+            "lowStockCount",
+            "expiryRiskValue",
+            "fleetUtilizationPct",
+          ],
+        },
+      },
+      required: ["summary", "html", "metrics"],
+    },
+  },
 ];

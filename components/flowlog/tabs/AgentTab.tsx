@@ -3,14 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "@/app/flowlog.module.css";
 import { runAgentLoop } from "@/lib/flowlog/agent";
+import { PROFILES } from "@/lib/flowlog/agents/profiles";
 import { useFlowLog } from "@/lib/flowlog/state";
-import type { ChatDisplayMessage } from "@/lib/flowlog/types";
+import type {
+  AgentProfileId,
+  ChatDisplayMessage,
+} from "@/lib/flowlog/types";
 
-const SUGGESTED = [
-  "What items are low on stock and what will it cost to reorder them all?",
-  "Which deliveries are pending? Find available drivers and assign them.",
-  "Give me a full daily operations summary with any alerts.",
-  "What's my expiry risk this week?",
+const PROFILE_ORDER: AgentProfileId[] = [
+  "general",
+  "inbox",
+  "outbox",
+  "dispatch",
+  "reports",
 ];
 
 function renderInline(text: string): React.ReactNode {
@@ -132,6 +137,7 @@ export function AgentTab() {
   const { state, dispatch, stateRef } = useFlowLog();
   const [input, setInput] = useState("");
   const hasInteracted = state.chat.length > 0;
+  const activeProfile = PROFILES[state.activeAgentProfile];
 
   const api = {
     getState: () => stateRef.current,
@@ -143,7 +149,7 @@ export function AgentTab() {
     const text = (overrideText ?? input).trim();
     if (!text) return;
     if (!overrideText) setInput("");
-    await runAgentLoop(text, api);
+    await runAgentLoop(text, api, state.activeAgentProfile);
   }
 
   function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -156,21 +162,30 @@ export function AgentTab() {
   return (
     <section className={styles["tab-agent-section"]}>
       <div className={styles["agent-header"]}>
-        <h1>AI Logistics Agent</h1>
-        <p>
-          Ask anything. The agent can query data, create reorders, assign
-          deliveries, and generate insights using live tool access.
-        </p>
+        <h1>AI Logistics Agents</h1>
+        <p>{activeProfile.tagline}</p>
+      </div>
+      <div className={styles["profile-selector"]}>
+        {PROFILE_ORDER.map((pid) => {
+          const p = PROFILES[pid];
+          const active = state.activeAgentProfile === pid;
+          return (
+            <button
+              key={pid}
+              type="button"
+              className={`${styles["profile-pill"]} ${active ? styles.active : ""}`}
+              onClick={() =>
+                dispatch({ type: "SET_ACTIVE_PROFILE", profile: pid })
+              }
+              disabled={state.agentRunning}
+            >
+              {p.label}
+            </button>
+          );
+        })}
       </div>
       <div className={styles["capability-chips"]}>
-        {[
-          "Query inventory",
-          "Check orders",
-          "Fleet status",
-          "Create reorders",
-          "Assign drivers",
-          "Generate reports",
-        ].map((c) => (
+        {activeProfile.toolNames.map((c) => (
           <span key={c} className={styles["cap-chip"]}>
             {c}
           </span>
@@ -178,7 +193,7 @@ export function AgentTab() {
       </div>
       {!hasInteracted && (
         <div className={styles["suggested-row"]}>
-          {SUGGESTED.map((s) => (
+          {activeProfile.suggestedPrompts.map((s) => (
             <button
               key={s}
               type="button"
@@ -194,7 +209,7 @@ export function AgentTab() {
       <div className={styles["chat-input-bar"]}>
         <textarea
           className={styles["chat-textarea"]}
-          placeholder="Ask your logistics agent anything..."
+          placeholder={`Ask the ${activeProfile.label}...`}
           rows={1}
           value={input}
           onChange={(e) => setInput(e.target.value)}

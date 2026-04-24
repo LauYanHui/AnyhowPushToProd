@@ -5,7 +5,24 @@ import {
   nearestExpiry,
   stockStatus,
 } from "./helpers";
-import type { FlowLogData } from "./types";
+import type {
+  DailyReport,
+  DailyReportMetrics,
+  Email,
+  FlowLogData,
+} from "./types";
+
+const OPS_EMAIL = "tansq05@gmail.com";
+
+function nextEmailId(): string {
+  return `EML-${String(Date.now()).slice(-6)}${Math.floor(Math.random() * 100)
+    .toString()
+    .padStart(2, "0")}`;
+}
+
+function nextReportId(dateCovered: string): string {
+  return `RPT-${dateCovered}-${String(Date.now()).slice(-4)}`;
+}
 
 export interface ToolResult {
   result: unknown;
@@ -35,6 +52,18 @@ export function executeTool(
         return updateOrderStatus(input, data);
       case "assign_delivery":
         return assignDelivery(input, data);
+      case "list_emails":
+        return { result: listEmails(input, data) };
+      case "read_email":
+        return readEmail(input, data);
+      case "draft_email_reply":
+        return draftEmailReply(input, data);
+      case "send_email":
+        return sendEmail(input, data);
+      case "mark_email_handled":
+        return markEmailHandled(input, data);
+      case "generate_daily_report":
+        return generateDailyReport(input, data);
       default:
         return { result: { error: `Unknown tool: ${name}` } };
     }
@@ -391,6 +420,319 @@ function assignDelivery(
       assigned_driver: driver.name,
       assigned_vehicle: vehicle.plateNumber,
       delivery_window: `${fmtTime(order.deliveryWindow.earliest)}–${fmtTime(order.deliveryWindow.latest)}`,
+    },
+    nextData,
+  };
+}
+
+function listEmails(
+  input: Record<string, unknown>,
+  data: FlowLogData,
+): Record<string, unknown> {
+  const direction = (input.direction as string) ?? "all";
+  const status = (input.status as string) ?? "all";
+  const category = input.category as string | undefined;
+  const limit = (input.limit as number) ?? 20;
+
+  let emails = data.emails.slice();
+  if (direction !== "all")
+    emails = emails.filter((e) => e.direction === direction);
+  if (status !== "all") emails = emails.filter((e) => e.status === status);
+  if (category) emails = emails.filter((e) => e.category === category);
+
+  emails.sort(
+    (a, b) =>
+      new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime(),
+  );
+
+  const trimmed = emails.slice(0, limit).map((e) => ({
+    id: e.id,
+    direction: e.direction,
+    status: e.status,
+    category: e.category,
+    from: e.from,
+    to: e.to,
+    subject: e.subject,
+    receivedAt: e.receivedAt,
+    relatedOrderId: e.relatedOrderId,
+    relatedSupplierId: e.relatedSupplierId,
+    preview: e.body.slice(0, 140),
+  }));
+
+  return {
+    count: trimmed.length,
+    total: emails.length,
+    emails: trimmed,
+  };
+}
+
+function readEmail(
+  input: Record<string, unknown>,
+  data: FlowLogData,
+): ToolResult {
+  const emailId = input.email_id as string;
+  const email = data.emails.find((e) => e.id === emailId);
+  if (!email) return { result: { error: `Email ${emailId} not found` } };
+
+  const relatedOrder = email.relatedOrderId
+    ? data.orders.find((o) => o.id === email.relatedOrderId)
+    : null;
+  const relatedSupplier = email.relatedSupplierId
+    ? data.suppliers.find((s) => s.id === email.relatedSupplierId)
+    : null;
+
+  let nextData: FlowLogData | undefined;
+  if (email.status === "unread") {
+    nextData = {
+      ...data,
+      emails: data.emails.map((e) =>
+        e.id === emailId ? { ...e, status: "read" } : e,
+      ),
+    };
+  }
+
+  return {
+    result: {
+      id: email.id,
+      direction: email.direction,
+      from: email.from,
+      to: email.to,
+      subject: email.subject,
+      body: email.body,
+      receivedAt: email.receivedAt,
+      status: nextData ? "read" : email.status,
+      category: email.category,
+      relatedOrderId: email.relatedOrderId,
+      relatedSupplierId: email.relatedSupplierId,
+      relatedOrder: relatedOrder
+        ? {
+            id: relatedOrder.id,
+            status: relatedOrder.status,
+            priority: relatedOrder.priority,
+            customerName: relatedOrder.customerName,
+            customerAddress: relatedOrder.customerAddress,
+            deliveryWindow: relatedOrder.deliveryWindow,
+            assignedDriverId: relatedOrder.assignedDriverId,
+            assignedVehicleId: relatedOrder.assignedVehicleId,
+            totalValue: relatedOrder.totalValue,
+            notes: relatedOrder.notes,
+          }
+        : null,
+      relatedSupplier: relatedSupplier
+        ? {
+            id: relatedSupplier.id,
+            name: relatedSupplier.name,
+            contactEmail: relatedSupplier.contactEmail,
+            leadTimeDays: relatedSupplier.leadTimeDays,
+          }
+        : null,
+    },
+    nextData,
+  };
+}
+
+function draftEmailReply(
+  input: Record<string, unknown>,
+  data: FlowLogData,
+): ToolResult {
+  const replyToId = input.reply_to_email_id as string;
+  const subject = input.subject as string;
+  const body = input.body as string;
+  const relatedOrderId = (input.related_order_id as string) ?? null;
+
+  const src = data.emails.find((e) => e.id === replyToId);
+  if (!src) return { result: { error: `Email ${replyToId} not found` } };
+
+  const draft: Email = {
+    id: nextEmailId(),
+    direction: "outgoing",
+    from: OPS_EMAIL,
+    to: src.from,
+    subject: subject.startsWith("Re:") ? subject : `Re: ${src.subject}`,
+    body,
+    receivedAt: new Date().toISOString(),
+    status: "draft",
+    category: src.category,
+    relatedOrderId: relatedOrderId ?? src.relatedOrderId,
+    relatedSupplierId: src.relatedSupplierId,
+    draftedBy: "agent",
+    agentNotes: `Drafted in response to ${src.id}`,
+    replyToEmailId: src.id,
+  };
+
+  const nextData: FlowLogData = {
+    ...data,
+    emails: [...data.emails, draft],
+  };
+
+  return {
+    result: {
+      success: true,
+      draft_id: draft.id,
+      to: draft.to,
+      subject: draft.subject,
+      reply_to_email_id: src.id,
+      status: "draft",
+      note: "Saved as draft in outbox. User must approve before send.",
+    },
+    nextData,
+  };
+}
+
+function sendEmail(
+  input: Record<string, unknown>,
+  data: FlowLogData,
+): ToolResult {
+  const emailId = input.email_id as string | undefined;
+  const to = input.to as string | undefined;
+  const subject = input.subject as string | undefined;
+  const body = input.body as string | undefined;
+  const relatedOrderId = (input.related_order_id as string) ?? null;
+
+  if (emailId) {
+    const existing = data.emails.find((e) => e.id === emailId);
+    if (!existing) return { result: { error: `Email ${emailId} not found` } };
+    if (existing.status === "sent")
+      return { result: { error: `Email ${emailId} already sent` } };
+    const nextData: FlowLogData = {
+      ...data,
+      emails: data.emails.map((e) =>
+        e.id === emailId
+          ? {
+              ...e,
+              status: "sent",
+              receivedAt: new Date().toISOString(),
+              draftedBy: e.draftedBy ?? "agent",
+            }
+          : e,
+      ),
+    };
+    return {
+      result: {
+        success: true,
+        email_id: emailId,
+        to: existing.to,
+        subject: existing.subject,
+        status: "sent",
+      },
+      nextData,
+    };
+  }
+
+  if (!to || !subject || !body) {
+    return {
+      result: {
+        error:
+          "send_email requires either email_id (to promote a draft) or to/subject/body (to create + send a new email).",
+      },
+    };
+  }
+
+  const sent: Email = {
+    id: nextEmailId(),
+    direction: "outgoing",
+    from: OPS_EMAIL,
+    to,
+    subject,
+    body,
+    receivedAt: new Date().toISOString(),
+    status: "sent",
+    category: "delivery_notification",
+    relatedOrderId,
+    relatedSupplierId: null,
+    draftedBy: "agent",
+    agentNotes: "",
+    replyToEmailId: null,
+  };
+  const nextData: FlowLogData = {
+    ...data,
+    emails: [...data.emails, sent],
+  };
+  return {
+    result: {
+      success: true,
+      email_id: sent.id,
+      to: sent.to,
+      subject: sent.subject,
+      status: "sent",
+    },
+    nextData,
+  };
+}
+
+function markEmailHandled(
+  input: Record<string, unknown>,
+  data: FlowLogData,
+): ToolResult {
+  const emailId = input.email_id as string;
+  const notes = (input.notes as string) ?? "";
+  const email = data.emails.find((e) => e.id === emailId);
+  if (!email) return { result: { error: `Email ${emailId} not found` } };
+  const nextData: FlowLogData = {
+    ...data,
+    emails: data.emails.map((e) =>
+      e.id === emailId
+        ? {
+            ...e,
+            status: "handled",
+            agentNotes: e.agentNotes ? `${e.agentNotes}\n${notes}` : notes,
+          }
+        : e,
+    ),
+  };
+  return {
+    result: {
+      success: true,
+      email_id: emailId,
+      subject: email.subject,
+      status: "handled",
+    },
+    nextData,
+  };
+}
+
+function generateDailyReport(
+  input: Record<string, unknown>,
+  data: FlowLogData,
+): ToolResult {
+  const summary = input.summary as string;
+  const html = input.html as string;
+  const metrics = input.metrics as DailyReportMetrics;
+
+  if (!summary || !html || !metrics) {
+    return {
+      result: { error: "generate_daily_report requires summary, html, metrics" },
+    };
+  }
+
+  const now = new Date();
+  const dateCovered = now.toISOString().split("T")[0];
+  const title = `Genspark Daily Briefing — ${now.toLocaleDateString("en-SG", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  })}`;
+
+  const report: DailyReport = {
+    id: nextReportId(dateCovered),
+    generatedAt: now.toISOString(),
+    dateCovered,
+    title,
+    summary,
+    html,
+    metrics,
+  };
+  const nextData: FlowLogData = {
+    ...data,
+    reports: [...data.reports, report],
+  };
+  return {
+    result: {
+      success: true,
+      report_id: report.id,
+      title: report.title,
+      dateCovered,
+      metrics,
     },
     nextData,
   };

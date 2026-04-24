@@ -6,8 +6,10 @@ import type { TabId } from "@/lib/flowlog/types";
 import {
   AgentIcon,
   DashboardIcon,
+  EmailIcon,
   InventoryIcon,
   OrdersIcon,
+  ReportsIcon,
   TruckIcon,
 } from "./Icons";
 
@@ -15,7 +17,9 @@ const NAV: Array<{ id: TabId; label: string; Icon: () => React.JSX.Element }> = 
   { id: "dashboard", label: "Dashboard", Icon: DashboardIcon },
   { id: "inventory", label: "Inventory", Icon: InventoryIcon },
   { id: "orders", label: "Deliveries", Icon: OrdersIcon },
-  { id: "agent", label: "AI Agent", Icon: AgentIcon },
+  { id: "emails", label: "Emails", Icon: EmailIcon },
+  { id: "reports", label: "Reports", Icon: ReportsIcon },
+  { id: "agent", label: "AI Agents", Icon: AgentIcon },
 ];
 
 export function Sidebar() {
@@ -26,9 +30,16 @@ export function Sidebar() {
     (i) => i.currentStock <= i.reorderPoint,
   ).length;
   const pending = data.orders.filter((o) => o.status === "pending").length;
+  const unread = data.emails.filter(
+    (e) => e.direction === "incoming" && e.status === "unread",
+  ).length;
+  const drafts = data.emails.filter((e) => e.status === "draft").length;
+  const emailBadge = unread + drafts;
+
   const badgeFor = (id: TabId): number | null => {
     if (id === "inventory") return lowInv || null;
     if (id === "orders") return pending || null;
+    if (id === "emails") return emailBadge || null;
     return null;
   };
 
@@ -67,7 +78,7 @@ export function Sidebar() {
 
       <div className={styles["sidebar-footer"]}>
         <div className={styles["api-hint"]}>
-          Agent runs server-side via /api/agent. Set{" "}
+          Agents run server-side via /api/agent. Set{" "}
           <span className={styles.mono}>ANTHROPIC_API_KEY</span> in{" "}
           <span className={styles.mono}>.env.local</span>.
         </div>

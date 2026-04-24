@@ -83,5 +83,171 @@ export function seedData(): FlowLogData {
     { id: "REO-2026-0002", inventoryId: "INV-016", supplierId: "SUP-004", qtyOrdered: 200, unitCost: 3.8, totalCost: 760, status: "pending", createdAt: new Date().toISOString(), expectedDelivery: d(1), urgency: "express", createdBy: "agent", notes: "Low stock — near expiry risk" },
   ];
 
-  return { suppliers, inventory, vehicles, drivers, orders, reorders };
+  const OPS_EMAIL = "tansq05@gmail.com";
+  const hoursAgo = (h: number): string =>
+    new Date(today.getTime() - h * 3600000).toISOString();
+
+  const emails: FlowLogData["emails"] = [
+    {
+      id: "EML-000001",
+      direction: "incoming",
+      from: "vendors@geylang-bazaar.sg",
+      to: OPS_EMAIL,
+      subject: "ORD-2026-013 — need to reschedule Geylang delivery",
+      body:
+        "Hi PrimeChill team,\n\n" +
+        "Our stall wasn't open when your driver came earlier today — nobody was there to receive the orange juice order (ORD-2026-013). Can we reschedule for tomorrow morning, anytime between 7am–9am? " +
+        "Same address, Geylang Rd Block 3.\n\n" +
+        "Sorry about this. Thanks — Faizal, Geylang Bazaar.",
+      receivedAt: hoursAgo(1),
+      status: "unread",
+      category: "customer_complaint",
+      relatedOrderId: "ORD-2026-013",
+      relatedSupplierId: null,
+      draftedBy: null,
+      agentNotes: "",
+      replyToEmailId: null,
+    },
+    {
+      id: "EML-000002",
+      direction: "incoming",
+      from: "procurement@sentosa-resort.com",
+      to: OPS_EMAIL,
+      subject: "URGENT — beef patties + tomatoes for tonight's event",
+      body:
+        "Hello,\n\n" +
+        "We have a late booking tonight at the resort and need a rush delivery of 15 cases of Beef Patties 4oz and 20 boxes of Cherry Tomatoes, delivered between 12pm and 2pm today to 8 Sentosa Gateway. " +
+        "This is order ORD-2026-012 which we already placed this morning. Can you confirm a driver is assigned? The event is non-negotiable.\n\n" +
+        "Best regards,\nMarcus Tan\nExec Chef, Sentosa Resort",
+      receivedAt: hoursAgo(2),
+      status: "unread",
+      category: "customer_inquiry",
+      relatedOrderId: "ORD-2026-012",
+      relatedSupplierId: null,
+      draftedBy: null,
+      agentNotes: "",
+      replyToEmailId: null,
+    },
+    {
+      id: "EML-000003",
+      direction: "incoming",
+      from: "orders@meridian.sg",
+      to: OPS_EMAIL,
+      subject: "Shipment REO-2026-0001 — on track for tomorrow AM",
+      body:
+        "Hi,\n\nConfirming your pork belly reorder (REO-2026-0001, 100 cases) is loaded and will arrive at the Tuas depot tomorrow between 08:00 and 10:00. " +
+        "Please have staff ready to receive.\n\nRgds,\nMeridian Cold Chain Despatch",
+      receivedAt: hoursAgo(3),
+      status: "unread",
+      category: "supplier_update",
+      relatedOrderId: null,
+      relatedSupplierId: "SUP-001",
+      draftedBy: null,
+      agentNotes: "",
+      replyToEmailId: null,
+    },
+    {
+      id: "EML-000004",
+      direction: "incoming",
+      from: "ops@changiairport-lounges.sg",
+      to: OPS_EMAIL,
+      subject: "ETA on ORD-2026-008?",
+      body:
+        "Hi team,\n\nJust checking in — what's the current ETA on ORD-2026-008 (salmon + cheddar for Terminal 3)? Our prep window is tight this afternoon. " +
+        "Please confirm the driver is cleared through airport security.\n\nThanks,\nChangi Lounge Ops",
+      receivedAt: hoursAgo(4),
+      status: "unread",
+      category: "customer_inquiry",
+      relatedOrderId: "ORD-2026-008",
+      relatedSupplierId: null,
+      draftedBy: null,
+      agentNotes: "",
+      replyToEmailId: null,
+    },
+    {
+      id: "EML-000005",
+      direction: "incoming",
+      from: "fb@orchardcatering.sg",
+      to: OPS_EMAIL,
+      subject: "Delay concerns — ORD-2026-007",
+      body:
+        "Hello,\n\nORD-2026-007 (beef patties + butter) was due at our kitchen between 11–1. It's past the window and we haven't heard anything. " +
+        "If the cold chain has been broken we will need to refuse the shipment. Can you confirm dispatch temp and ETA?\n\nBest,\nOrchard Catering Co.",
+      receivedAt: hoursAgo(1.5),
+      status: "unread",
+      category: "customer_complaint",
+      relatedOrderId: "ORD-2026-007",
+      relatedSupplierId: null,
+      draftedBy: null,
+      agentNotes: "",
+      replyToEmailId: null,
+    },
+    {
+      id: "EML-000006",
+      direction: "outgoing",
+      from: OPS_EMAIL,
+      to: "procurement@marinabaysands.com",
+      subject: "Delivered — ORD-2026-002",
+      body:
+        "Hi team,\n\nConfirming ORD-2026-002 was delivered this morning to Marina Bay Sands F&B. " +
+        "Driver: Rajan s/o Perumal, plate SGH-4410. Full cold chain maintained.\n\nCheers,\nPrimeChill Ops",
+      receivedAt: hoursAgo(4),
+      status: "sent",
+      category: "delivery_notification",
+      relatedOrderId: "ORD-2026-002",
+      relatedSupplierId: null,
+      draftedBy: "user",
+      agentNotes: "",
+      replyToEmailId: null,
+    },
+    {
+      id: "EML-000007",
+      direction: "outgoing",
+      from: OPS_EMAIL,
+      to: "orders@meridian.sg",
+      subject: "Purchase order — REO-2026-0001 / Sliced Pork Belly",
+      body:
+        "Hi Meridian team,\n\nPlease deliver 100 cases of Sliced Pork Belly (SKU FRZ-PORK-BELLY-SLICED) against reorder REO-2026-0001. " +
+        "Unit cost USD 55.00, total USD 5,500.00, Net 30. Deliver to Tuas depot by end of week.\n\nRgds,\nPrimeChill Procurement",
+      receivedAt: hoursAgo(24),
+      status: "sent",
+      category: "supplier_update",
+      relatedOrderId: null,
+      relatedSupplierId: "SUP-001",
+      draftedBy: "user",
+      agentNotes: "",
+      replyToEmailId: null,
+    },
+    {
+      id: "EML-000008",
+      direction: "outgoing",
+      from: OPS_EMAIL,
+      to: "kopitiam-grp@woodlands.sg",
+      subject: "Your delivery is out — ORD-2026-009",
+      body:
+        "Hi,\n\nJust a heads-up — your jasmine rice + onion order (ORD-2026-009) is out for delivery now with Ahmad Farid (SLP-3318), " +
+        "ETA 12:00–14:00 at 30 Woodlands Ave 2.\n\nThanks for your business.\nPrimeChill",
+      receivedAt: hoursAgo(1),
+      status: "sent",
+      category: "delivery_notification",
+      relatedOrderId: "ORD-2026-009",
+      relatedSupplierId: null,
+      draftedBy: "user",
+      agentNotes: "",
+      replyToEmailId: null,
+    },
+  ];
+
+  const reports: FlowLogData["reports"] = [];
+
+  return {
+    suppliers,
+    inventory,
+    vehicles,
+    drivers,
+    orders,
+    reorders,
+    emails,
+    reports,
+  };
 }
