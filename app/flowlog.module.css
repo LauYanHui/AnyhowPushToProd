@@ -1318,6 +1318,25 @@
   gap: 8px;
   padding: 4px 14px 10px;
 }
+.draft-preview {
+  padding: 10px 14px 12px;
+  border-top: 0.5px solid var(--border);
+  background: var(--surface2);
+}
+.draft-preview-meta {
+  font-size: 10px;
+  color: var(--hint);
+  margin-bottom: 6px;
+  font-family: var(--font-dm-mono), monospace;
+}
+.draft-preview-body {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: pre-wrap;
+  line-height: 1.6;
+  max-height: 140px;
+  overflow-y: auto;
+}
 .email-row-order {
   font-family: var(--font-dm-mono), monospace;
   font-size: 10px;
