@@ -404,7 +404,7 @@ function OutboxChatPanel({
       setValidationError(null);
       onPrefillConsumed?.();
     }
-  }, [prefill]);
+  }, [prefill, onPrefillConsumed]);
 
   const outboxMessages = state.chat.filter((m) => m.profileId === "outbox");
 
@@ -567,7 +567,10 @@ export function EmailTab() {
       api,
       "outbox",
     );
-    setView("sent");
+    const email = stateRef.current.data.emails.find((e) => e.id === id);
+    if (email?.status === "sent") {
+      setView("sent");
+    }
   }
 
   function handleDiscard(id: string) {
@@ -665,8 +668,3 @@ export function EmailTab() {
   );
 }
 
-export function unreadEmailCount(emails: Email[]): number {
-  return emails.filter(
-    (e) => e.direction === "incoming" && e.status === "unread",
-  ).length;
-}

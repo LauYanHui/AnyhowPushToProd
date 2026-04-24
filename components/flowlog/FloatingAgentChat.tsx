@@ -76,22 +76,25 @@ function Message({ msg }: { msg: ChatDisplayMessage }) {
 function ChatWindow() {
   const { state } = useFlowLog();
   const ref = useRef<HTMLDivElement>(null);
+  const profileMessages = state.chat.filter(
+    (m) => m.profileId === state.activeAgentProfile,
+  );
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [state.chat.length]);
+  }, [profileMessages.length]);
 
   return (
     <div ref={ref} className={styles["fchat-window"]}>
-      {state.chat.length === 0 && (
+      {profileMessages.length === 0 && (
         <div className={styles["fchat-empty"]}>
           Pick a profile above and ask anything — or trigger an agent from the
           dashboard, emails, or reports.
         </div>
       )}
-      {state.chat.map((m) => (
+      {profileMessages.map((m) => (
         <Message key={m.id} msg={m} />
       ))}
     </div>
@@ -130,7 +133,9 @@ export function FloatingAgentChat() {
   const posRef = useRef<Pos>(pos);
 
   const activeProfile = PROFILES[state.activeAgentProfile];
-  const hasInteracted = state.chat.length > 0;
+  const hasInteracted = state.chat.some(
+    (m) => m.profileId === state.activeAgentProfile,
+  );
 
   useEffect(() => {
     if (state.agentPrefill) {
@@ -247,7 +252,7 @@ export function FloatingAgentChat() {
           <button
             type="button"
             className={styles["fchat-icon-btn"]}
-            onClick={() => dispatch({ type: "CLEAR_CHAT" })}
+            onClick={() => dispatch({ type: "CLEAR_CHAT", profileId: state.activeAgentProfile })}
             title="Clear chat"
             aria-label="Clear chat"
           >

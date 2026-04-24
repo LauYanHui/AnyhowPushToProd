@@ -88,6 +88,7 @@ function OrderCard({ order }: { order: Order }) {
   const [expanded, setExpanded] = useState(false);
   const [driverSel, setDriverSel] = useState(order.assignedDriverId ?? "");
   const [vehicleSel, setVehicleSel] = useState(order.assignedVehicleId ?? "");
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   const driver = getDriver(data, order.assignedDriverId);
   const vehicle = getVehicle(data, order.assignedVehicleId);
@@ -112,6 +113,24 @@ function OrderCard({ order }: { order: Order }) {
 
   function handleAssign() {
     if (!driverSel || !vehicleSel) return;
+    setAssignError(null);
+
+    const selectedVehicle = data.vehicles.find((v) => v.id === vehicleSel);
+    if (selectedVehicle) {
+      const orderWeightKg = order.items.reduce((sum, it) => {
+        const inv = getItem(data, it.inventoryId);
+        return sum + (inv?.weightPerUnitKg ?? 0) * it.qty;
+      }, 0);
+      const remainingCapacity =
+        selectedVehicle.capacityKg - selectedVehicle.currentLoadKg;
+      if (orderWeightKg > 0 && orderWeightKg > remainingCapacity) {
+        setAssignError(
+          `Order weight ${orderWeightKg.toFixed(1)} kg exceeds vehicle remaining capacity ${remainingCapacity.toFixed(1)} kg.`,
+        );
+        return;
+      }
+    }
+
     // Free previously assigned driver/vehicle if re-assigning
     if (order.assignedDriverId && order.assignedDriverId !== driverSel) {
       dispatch({ type: "UPDATE_DRIVER", id: order.assignedDriverId, patch: { status: "available" } });
@@ -374,38 +393,45 @@ function OrderCard({ order }: { order: Order }) {
           <div className={styles["order-action-bar"]}>
             {/* Manual assign */}
             {canAssign && (
-              <div className={styles["order-assign-row"]}>
-                <select
-                  value={driverSel}
-                  onChange={(e) => setDriverSel(e.target.value)}
-                  className={styles["order-assign-select"]}
-                >
-                  <option value="">Select driver…</option>
-                  {availDrivers.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={vehicleSel}
-                  onChange={(e) => setVehicleSel(e.target.value)}
-                  className={styles["order-assign-select"]}
-                >
-                  <option value="">Select vehicle…</option>
-                  {availVehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.plateNumber} ({v.type})
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className={`${styles.btn} ${styles["btn-sm"]}`}
-                  onClick={handleAssign}
-                  disabled={!driverSel || !vehicleSel}
-                >
-                  Assign
-                </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div className={styles["order-assign-row"]}>
+                  <select
+                    value={driverSel}
+                    onChange={(e) => { setDriverSel(e.target.value); setAssignError(null); }}
+                    className={styles["order-assign-select"]}
+                  >
+                    <option value="">Select driver…</option>
+                    {availDrivers.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={vehicleSel}
+                    onChange={(e) => { setVehicleSel(e.target.value); setAssignError(null); }}
+                    className={styles["order-assign-select"]}
+                  >
+                    <option value="">Select vehicle…</option>
+                    {availVehicles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.plateNumber} ({v.type}, {v.capacityKg - v.currentLoadKg} kg free)
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className={`${styles.btn} ${styles["btn-sm"]}`}
+                    onClick={handleAssign}
+                    disabled={!driverSel || !vehicleSel}
+                  >
+                    Assign
+                  </button>
+                </div>
+                {assignError && (
+                  <div style={{ fontSize: 11, color: "var(--red)" }}>
+                    {assignError}
+                  </div>
+                )}
               </div>
             )}
 

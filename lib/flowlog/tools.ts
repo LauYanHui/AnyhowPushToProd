@@ -225,15 +225,15 @@ export const TOOLS = [
   {
     name: "send_email",
     description:
-      "Send outgoing email. If email_id is a draft, promotes to sent; else creates new sent email.",
+      "Send outgoing email. Two modes: (1) Promote a draft — provide email_id only. (2) Compose and send new — provide to, subject, and body (email_id must be omitted).",
     input_schema: {
       type: "object",
       properties: {
-        email_id: { type: "string" },
-        to: { type: "string" },
-        subject: { type: "string" },
-        body: { type: "string" },
-        related_order_id: { type: "string" },
+        email_id: { type: "string", description: "ID of an existing draft to promote to sent. Use this OR the compose fields — not both." },
+        to: { type: "string", description: "Recipient address. Required when composing a new email (no email_id)." },
+        subject: { type: "string", description: "Email subject. Required when composing a new email (no email_id)." },
+        body: { type: "string", description: "Plain-text email body. Required when composing a new email (no email_id)." },
+        related_order_id: { type: "string", description: "Optional order ID to associate with this email." },
       },
       required: [],
     },
