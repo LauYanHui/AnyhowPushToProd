@@ -1,3 +1,5 @@
+import "server-only";
+
 export const TOOLS = [
   {
     name: "get_inventory",

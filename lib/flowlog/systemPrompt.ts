@@ -1,3 +1,5 @@
+import "server-only";
+
 export function buildSystemPrompt(): string {
   const dateStr = new Date().toLocaleDateString("en-SG", {
     weekday: "long",

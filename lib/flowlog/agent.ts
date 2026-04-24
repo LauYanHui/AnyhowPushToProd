@@ -1,10 +1,9 @@
-import { buildSystemPrompt } from "./systemPrompt";
 import { executeTool } from "./toolHandlers";
-import { TOOLS } from "./tools";
 import type {
   AnthropicMessage,
   ChatDisplayMessage,
   ContentBlock,
+  FlowLogData,
 } from "./types";
 import type { Action, FlowLogState } from "./state";
 
@@ -37,7 +36,17 @@ export async function runAgentLoop(
 ): Promise<void> {
   api.dispatch({ type: "SET_RUNNING", running: true });
   appendChat(api, { kind: "user", id: nextId("u"), text: userText });
+
+  // Track the authoritative messages + data locally. Reducer dispatches mirror
+  // this for persistence, but their effect lands asynchronously — reading back
+  // through api.getState() immediately after a dispatch returns stale data.
+  const messages: AnthropicMessage[] = [
+    ...api.getState().anthropicMessages,
+    { role: "user", content: userText },
+  ];
   appendAnthropic(api, { role: "user", content: userText });
+
+  let workingData: FlowLogData = api.getState().data;
 
   let turns = 0;
   try {
@@ -45,16 +54,10 @@ export async function runAgentLoop(
       const thinkingId = nextId("thinking");
       appendChat(api, { kind: "thinking", id: thinkingId });
 
-      const messages = api.getState().anthropicMessages;
       const response = await fetch("/api/agent", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          max_tokens: 4096,
-          system: buildSystemPrompt(),
-          tools: TOOLS,
-          messages,
-        }),
+        body: JSON.stringify({ messages }),
       });
 
       api.dispatch({ type: "REMOVE_CHAT_BY_ID", id: thinkingId });
@@ -73,7 +76,12 @@ export async function runAgentLoop(
         break;
       }
 
-      appendAnthropic(api, { role: "assistant", content: data.content });
+      const assistantTurn: AnthropicMessage = {
+        role: "assistant",
+        content: data.content,
+      };
+      messages.push(assistantTurn);
+      appendAnthropic(api, assistantTurn);
 
       const textBlocks = data.content.filter(
         (b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text",
@@ -102,9 +110,10 @@ export async function runAgentLoop(
           const { result, nextData } = executeTool(
             block.name,
             block.input,
-            api.getState().data,
+            workingData,
           );
           if (nextData) {
+            workingData = nextData;
             api.dispatch({ type: "SET_DATA", data: nextData });
           }
           appendChat(api, {
@@ -120,7 +129,12 @@ export async function runAgentLoop(
           });
         }
 
-        appendAnthropic(api, { role: "user", content: toolResults });
+        const toolResultTurn: AnthropicMessage = {
+          role: "user",
+          content: toolResults,
+        };
+        messages.push(toolResultTurn);
+        appendAnthropic(api, toolResultTurn);
         continue;
       }
 

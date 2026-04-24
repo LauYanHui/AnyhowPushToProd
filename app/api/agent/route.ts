@@ -1,9 +1,11 @@
-const MODEL = "claude-sonnet-4-20250514";
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+import Anthropic from "@anthropic-ai/sdk";
+import { buildSystemPrompt } from "@/lib/flowlog/systemPrompt";
+import { TOOLS } from "@/lib/flowlog/tools";
+
+const MODEL = "claude-sonnet-4-6";
 
 export async function POST(req: Request) {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json(
       {
         error: {
@@ -16,9 +18,9 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: Record<string, unknown>;
+  let body: { messages?: unknown };
   try {
-    body = await req.json();
+    body = (await req.json()) as { messages?: unknown };
   } catch {
     return Response.json(
       { error: { type: "invalid_request", message: "Invalid JSON body" } },
@@ -26,16 +28,39 @@ export async function POST(req: Request) {
     );
   }
 
-  const upstream = await fetch(ANTHROPIC_URL, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({ model: MODEL, ...body }),
-  });
+  if (!Array.isArray(body.messages)) {
+    return Response.json(
+      { error: { type: "invalid_request", message: "`messages` array is required" } },
+      { status: 400 },
+    );
+  }
 
-  const data = await upstream.json();
-  return Response.json(data, { status: upstream.status });
+  const client = new Anthropic();
+
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 4096,
+      system: buildSystemPrompt(),
+      tools: TOOLS as Anthropic.Tool[],
+      messages: body.messages as Anthropic.MessageParam[],
+    });
+    return Response.json(response);
+  } catch (e) {
+    if (e instanceof Anthropic.APIError) {
+      return Response.json(
+        { error: { type: e.name, message: e.message } },
+        { status: e.status ?? 502 },
+      );
+    }
+    return Response.json(
+      {
+        error: {
+          type: "internal_error",
+          message: e instanceof Error ? e.message : String(e),
+        },
+      },
+      { status: 500 },
+    );
+  }
 }
