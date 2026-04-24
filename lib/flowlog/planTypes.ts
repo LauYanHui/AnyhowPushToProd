@@ -96,12 +96,28 @@ export interface PlanDeliveryPlanEntry {
   notes: string;
 }
 
+export interface PlanEscalation {
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | string;
+  title: string;
+  detail: string;
+  orderIds: string[];
+}
+
+export interface PlanAction {
+  priority: number;
+  action: string;
+}
+
 export interface PlanOwnerSummary {
   totalOrders: number;
   canFulfil: number;
   atRisk: number;
-  urgent: string;
-  recommendation: string;
+  /** @deprecated kept for backwards compat with older cached plans */
+  urgent?: string;
+  /** @deprecated kept for backwards compat with older cached plans */
+  recommendation?: string;
+  escalations?: PlanEscalation[];
+  actions?: PlanAction[];
 }
 
 export interface PlanResult {
