@@ -152,13 +152,26 @@ const FlowLogContext = createContext<FlowLogContextValue | null>(null);
 export function FlowLogProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const stateRef = useRef(state);
+
+  // Keep stateRef in sync after every render (for external reads)
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
+  // Wrap dispatch so stateRef is updated synchronously.
+  // This prevents the race where agent.ts reads stateRef before React re-renders.
+  const syncDispatch = useMemo(() => {
+    const fn: typeof dispatch = (action) => {
+      stateRef.current = reducer(stateRef.current, action);
+      dispatch(action);
+    };
+    return fn;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const value = useMemo(
-    () => ({ state, dispatch, stateRef }),
-    [state],
+    () => ({ state, dispatch: syncDispatch, stateRef }),
+    [state, syncDispatch],
   );
 
   return (
