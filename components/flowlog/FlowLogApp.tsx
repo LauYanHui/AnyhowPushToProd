@@ -2,8 +2,8 @@
 
 import styles from "@/app/flowlog.module.css";
 import { FlowLogProvider, useFlowLog } from "@/lib/flowlog/state";
+import { FloatingAgentChat } from "./FloatingAgentChat";
 import { Sidebar } from "./Sidebar";
-import { AgentTab } from "./tabs/AgentTab";
 import { DashboardTab } from "./tabs/DashboardTab";
 import { EmailTab } from "./tabs/EmailTab";
 import { InventoryTab } from "./tabs/InventoryTab";
@@ -19,8 +19,6 @@ function ActiveTab() {
       return <InventoryTab />;
     case "orders":
       return <OrdersTab />;
-    case "agent":
-      return <AgentTab />;
     case "emails":
       return <EmailTab />;
     case "reports":
@@ -36,6 +34,7 @@ export function FlowLogApp() {
         <main className={styles["main-content"]}>
           <ActiveTab />
         </main>
+        <FloatingAgentChat />
       </div>
     </FlowLogProvider>
   );
