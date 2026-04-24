@@ -202,11 +202,26 @@ export async function POST(req: Request) {
     );
   }
 
+  const fulfillmentStatus = (
+    Array.isArray(parsed.fulfillmentStatus) ? parsed.fulfillmentStatus : []
+  ) as Array<{ status: string }>;
+
+  // Derive KPIs from the fulfillment array so they are guaranteed to tally,
+  // rather than relying on Claude's independently-generated summary numbers.
+  const canFulfil = fulfillmentStatus.filter((f) => f.status === "FULL").length;
+  const atRisk = fulfillmentStatus.filter((f) => f.status !== "FULL").length;
+  const ownerSummary = {
+    ...((parsed.ownerSummary as Record<string, unknown>) ?? {}),
+    totalOrders: fulfillmentStatus.length,
+    canFulfil,
+    atRisk,
+  };
+
   return Response.json({
-    fulfillmentStatus: parsed.fulfillmentStatus ?? [],
+    fulfillmentStatus,
     shortageAlerts: parsed.shortageAlerts ?? [],
     expiringStock: parsed.expiringStock ?? [],
     deliveryPlan: parsed.deliveryPlan ?? [],
-    ownerSummary: parsed.ownerSummary ?? {},
+    ownerSummary,
   });
 }
