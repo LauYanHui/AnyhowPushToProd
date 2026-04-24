@@ -216,9 +216,22 @@ function EmailBody({
   const api = { getState: () => stateRef.current, dispatch };
   const [busy, setBusy] = useState(false);
 
+  async function triageWithInboxAgent() {
+    if (state.agentRunning) return;
+    setBusy(true);
+    dispatch({ type: "SET_CHAT_OPEN", open: true });
+    await runAgentLoop(
+      `Triage incoming email ${email.id}. Read it, pull related order/supplier context, and either draft a reply with draft_email_reply or mark_email_handled if no reply is needed.`,
+      api,
+      "inbox",
+    );
+    setBusy(false);
+  }
+
   async function approveAndSend() {
     if (state.agentRunning) return;
     setBusy(true);
+    dispatch({ type: "SET_CHAT_OPEN", open: true });
     await runAgentLoop(
       `Send the draft email ${email.id} now. Use send_email with email_id="${email.id}".`,
       api,
@@ -451,7 +464,7 @@ function OutboxChatPanel({
         <div className={styles["outbox-chat-empty"]}>
           <div>Describe the email you want to send.</div>
           <div className={styles["text-hint"]} style={{ fontSize: "11px" }}>
-            e.g. "Draft an ETA update for the Changi Airport order" — the agent will ask if it needs more details.
+            e.g. &ldquo;Draft an ETA update for the Changi Airport order&rdquo; — the agent will ask if it needs more details.
           </div>
         </div>
       ) : (

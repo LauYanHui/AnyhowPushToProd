@@ -112,6 +112,7 @@ export function ReportsTab() {
 
   async function generate() {
     if (state.agentRunning) return;
+    dispatch({ type: "SET_CHAT_OPEN", open: true });
     await runAgentLoop(
       "Generate today's Genspark Daily Briefing. Follow the Reports Agent workflow exactly.",
       api,

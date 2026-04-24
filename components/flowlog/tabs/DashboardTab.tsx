@@ -17,7 +17,7 @@ import type { TabId } from "@/lib/flowlog/types";
 import { DailyPlanPanel } from "../plan/DailyPlanPanel";
 import { PriorityDot, StatusPill } from "../ui";
 
-type AgentRunShortcut = "dispatch-all" | "triage-inbox";
+type AgentRunShortcut = "dispatch-all" | "triage-inbox" | "ask-general";
 
 type AlertAction =
   | { kind: "tab"; label: string; tab: TabId }
@@ -65,13 +65,13 @@ function useAlerts(): Alert[] {
         alerts.push({
           level: "crit",
           text: `${i.name} — ${e.qty} ${i.unit}s expire ${fmtDate(e.expiresOn)}`,
-          actions: [{ kind: "tab", label: "Ask Agent", tab: "agent" }],
+          actions: [{ kind: "run", label: "Ask Agent", run: "ask-general" }],
         });
       } else if (withinNextDays(e.expiresOn, today, 7)) {
         alerts.push({
           level: "warn",
           text: `${i.name} — ${e.qty} ${i.unit}s expire ${fmtDate(e.expiresOn)}`,
-          actions: [{ kind: "tab", label: "Ask Agent", tab: "agent" }],
+          actions: [{ kind: "run", label: "Ask Agent", run: "ask-general" }],
         });
       }
     }),
@@ -83,7 +83,7 @@ function useAlerts(): Alert[] {
       alerts.push({
         level: "warn",
         text: `${i.name} below reorder point (${i.currentStock}/${i.reorderPoint} ${i.unit})`,
-        actions: [{ kind: "tab", label: "Reorder", tab: "agent" }],
+        actions: [{ kind: "run", label: "Reorder", run: "ask-general" }],
       }),
     );
 
@@ -194,7 +194,7 @@ function AlertsCard() {
 
   async function runAction(run: AgentRunShortcut) {
     if (state.agentRunning) return;
-    dispatch({ type: "SET_ACTIVE_TAB", tab: "agent" });
+    dispatch({ type: "SET_CHAT_OPEN", open: true });
     if (run === "dispatch-all") {
       await runAgentLoop(
         "Assign all pending orders using the best available driver and vehicle. Prioritise urgent orders and check capacity carefully.",
@@ -209,6 +209,9 @@ function AlertsCard() {
         "inbox",
         { mode: "ephemeral" },
       );
+    } else if (run === "ask-general") {
+      // Just open the floating chat on the general profile — user types their question.
+      dispatch({ type: "SET_ACTIVE_PROFILE", profile: "general" });
     }
   }
 
@@ -401,9 +404,9 @@ export function DashboardTab() {
       `For each order, use the assign_delivery tool. Skip orders that are already assigned, in transit, or delivered.`;
 
     const api = { getState: () => stateRef.current, dispatch };
-    dispatch({ type: "SET_ACTIVE_TAB", tab: "agent" });
+    dispatch({ type: "SET_CHAT_OPEN", open: true });
     try {
-      await runAgentLoop(prompt, api, "dispatch");
+      await runAgentLoop(prompt, api, "dispatch", { mode: "ephemeral" });
     } finally {
       setApplyLoading(false);
     }
