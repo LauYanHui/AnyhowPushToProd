@@ -184,10 +184,8 @@ function reducer(state: FlowLogState, action: Action): FlowLogState {
         },
       };
     case "SET_API_KEY":
-      if (typeof window !== "undefined") {
-        if (action.key) localStorage.setItem("flowlog:apiKey", action.key);
-        else localStorage.removeItem("flowlog:apiKey");
-      }
+      if (action.key) localStorage.setItem("flowlog:apiKey", action.key);
+      else localStorage.removeItem("flowlog:apiKey");
       return { ...state, apiKey: action.key };
   }
 }
@@ -205,10 +203,7 @@ function initialState(): FlowLogState {
     activeAgentProfile: "general",
     agentPrefill: null,
     selectedEmailId: null,
-    apiKey:
-      (typeof window !== "undefined"
-        ? localStorage.getItem("flowlog:apiKey")
-        : null) ?? "",
+    apiKey: "",
     plan: null,
     planLoading: false,
     planError: null,
@@ -227,6 +222,13 @@ const FlowLogContext = createContext<FlowLogContextValue | null>(null);
 export function FlowLogProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const stateRef = useRef(state);
+
+  // Load persisted API key after mount to avoid SSR/client hydration mismatch.
+  useEffect(() => {
+    const saved = localStorage.getItem("flowlog:apiKey");
+    if (saved) dispatch({ type: "SET_API_KEY", key: saved });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Keep stateRef in sync after every render (for external reads)
   useEffect(() => {
